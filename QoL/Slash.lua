@@ -17,7 +17,16 @@ SLASH_QOL1 = "/qol"
 SlashCmdList.QOL = function(msg)
     local cmd, rest = (msg or ""):match("^%s*(%S*)%s*(.-)%s*$")
     cmd = cmd:lower()
-    if cmd == "" or cmd == "help" then
+    if cmd == "" then
+        -- Bare /qol brings back the to-do window if it was closed.
+        local todo = QoL.modules.todo
+        if todo and todo.frame and not todo.frame:IsShown() then
+            todo:SetShown(true)
+        else
+            printHelp()
+        end
+        return
+    elseif cmd == "help" then
         printHelp()
         return
     end

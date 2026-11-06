@@ -4,6 +4,7 @@ local QoL = ns.QoL
 local T = ns.Todo
 
 local TITLE_HEIGHT = 26
+local COLLAPSED_WIDTH = 110
 local MIN_W, MIN_H, MAX_W, MAX_H = 200, 160, 600, 900
 
 local BACKDROP = {
@@ -63,12 +64,12 @@ function T:SetCollapsed(collapsed)
     if collapsed then
         f.content:Hide()
         f.grip:Hide()
-        f:SetResizeBounds(MIN_W, TITLE_HEIGHT, MAX_W, TITLE_HEIGHT)
-        f:SetHeight(TITLE_HEIGHT)
+        f:SetResizeBounds(COLLAPSED_WIDTH, TITLE_HEIGHT, COLLAPSED_WIDTH, TITLE_HEIGHT)
+        f:SetSize(COLLAPSED_WIDTH, TITLE_HEIGHT)
         f.collapseButton:SetText("+")
     else
         f:SetResizeBounds(MIN_W, MIN_H, MAX_W, MAX_H)
-        f:SetHeight(self.charDB.height)
+        f:SetSize(self.charDB.width, self.charDB.height)
         f.content:Show()
         f.grip:SetShown(not self.charDB.locked)
         f.collapseButton:SetText("-")
@@ -82,14 +83,7 @@ function T:SetLocked(locked)
 end
 
 function T:UpdateTitle()
-    local f = self.frame
-    local tab = self:GetActiveTab()
-    if self.charDB.collapsed and tab then
-        local left = self:CountTasks(tab)
-        f.title:SetText(("QoL To-Do  |cffaaaaaa%s (%d left)|r"):format(tab.name, left))
-    else
-        f.title:SetText("QoL To-Do")
-    end
+    self.frame.title:SetText("QoL")
 end
 
 local function makeTitleButton(parent, text)
@@ -136,7 +130,7 @@ function T:CreateMainFrame()
     close:SetPoint("RIGHT", bar, "RIGHT", 0, 0)
     close:SetScript("OnClick", function()
         self:SetShown(false)
-        QoL:Print("to-do hidden. Type /qol todo to show it again.")
+        QoL:Print("hidden. Type /qol to show it again.")
     end)
 
     local collapse = makeTitleButton(bar, "-")

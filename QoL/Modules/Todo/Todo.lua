@@ -19,6 +19,7 @@ local T = QoL:RegisterModule("todo", {
         height = 320,
     },
     slashHelp = {
+        "/qol - show the window if it was closed (otherwise this help)",
         "/qol todo - show or hide the window",
         "/qol todo add <text> - add a task to the current tab",
         "/qol todo clear - delete ticked tasks on the current tab",
