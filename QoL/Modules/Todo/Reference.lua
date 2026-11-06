@@ -20,12 +20,12 @@ local PROFESSIONS = table.concat({
     p("Skinning") .. " - Camp Chair: +2% crit",
     p("Tailoring") .. " - Faction Banner: Spirit",
     p("Engineering") .. " - Reagent Bot: reagent vendor",
-    p("Mining") .. " - Loadstone: Melee AP",
+    p("Mining") .. " - Lodestone: Melee AP",
     "",
     h("Campfires"),
     "Cooking 1 unlocks a Basic Campfire.",
     "Each player adds one object.",
-    "Basic Campfires hold 3 objects - upgraded hold.",
+    "Basic Campfires hold 3 objects - upgraded hold 5 or 10.",
     "Camp buffs don't stack with the class buffs they copy, and are a bit weaker (8% stats vs 10% from Kings).",
 }, "\n")
 
