@@ -1,4 +1,4 @@
--- Task list: scrolling rows, inline edit, add box, Clear completed.
+-- Task list: scrolling rows, inline edit, add box.
 local _, ns = ...
 local T = ns.Todo
 
@@ -82,18 +82,11 @@ local function createRow(self, parent)
 end
 
 function T:CreateTaskList(parent)
-    -- Bottom bar: add box and Clear completed.
-    local clear = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
-    clear:SetSize(110, 22)
-    clear:SetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT", -12, 0)
-    clear:SetText("Clear completed")
-    clear:SetScript("OnClick", function() self:ConfirmClearCompleted() end)
-    self.clearButton = clear
-
+    -- Bottom bar: the add box, full width (leaving room for the resize grip).
     local add = CreateFrame("EditBox", nil, parent, "InputBoxTemplate")
     add:SetHeight(22)
     add:SetPoint("BOTTOMLEFT", parent, "BOTTOMLEFT", 6, 0)
-    add:SetPoint("RIGHT", clear, "LEFT", -8, 0)
+    add:SetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT", -14, 0)
     add:SetAutoFocus(false)
     add:SetMaxLetters(200)
     add:SetScript("OnEnterPressed", function(box)
@@ -153,8 +146,6 @@ function T:RefreshTasks()
         rows[i]:Hide()
     end
 
-    local _, done = self:CountTasks(tab)
-    self.clearButton:SetEnabled(done > 0)
     self.emptyText:SetShown(#tab.tasks == 0)
     self:LayoutTasks()
 end

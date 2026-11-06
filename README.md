@@ -13,7 +13,7 @@ An on-screen to-do list.
 - Resize it from the bottom-right corner.
 - Use as many tabs as you like. Click `+` to add one, double-click a tab to rename it, and right-click a tab to rename or delete it.
 - Click a task to edit it, tick it when it's done, or click `x` to delete it.
-- **Clear completed** deletes every ticked task on the current tab.
+- `/qol todo clear` deletes every ticked task on the current tab.
 - Lists are shared by all your characters. Each character remembers its own window position.
 
 | Command | What it does |
