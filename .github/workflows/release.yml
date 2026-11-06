@@ -1,11 +1,14 @@
 name: Release
 
-# Push a tag like v0.1.0 to build QoL-v0.1.0-forever.zip and publish a
-# GitHub release. WowUp installs from that release asset.
+# When the "## Version" in QoL/QoL.toc changes to a version that has no release
+# yet, build QoL-v<version>-forever.zip and publish a GitHub release for it.
+# WowUp installs from that release asset. Can also be run by hand.
 on:
   push:
-    tags:
-      - "v*"
+    paths:
+      - "QoL/**"
+      - ".github/workflows/release.yml"
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -16,16 +19,28 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set version in TOC
-        run: sed -i "s/^## Version: .*/## Version: ${GITHUB_REF_NAME#v}/" QoL/QoL.toc
+      - name: Read version
+        id: version
+        run: |
+          version=$(sed -n 's/^## Version: *//p' QoL/QoL.toc | tr -d '\r')
+          echo "tag=v$version" >> "$GITHUB_OUTPUT"
+          if gh release view "v$version" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
 
       - name: Build zip
+        if: steps.version.outputs.exists != 'true'
         run: |
           mkdir -p dist
-          zip -r "dist/QoL-${GITHUB_REF_NAME}-forever.zip" QoL
+          zip -r "dist/QoL-${{ steps.version.outputs.tag }}-forever.zip" QoL
 
       - name: Publish release
+        if: steps.version.outputs.exists != 'true'
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          target_commitish: ${{ github.sha }}
           files: dist/*.zip
           generate_release_notes: true
