@@ -58,7 +58,7 @@ end
 
 function T:PromptRenameTab(tabId)
     local tab = self:GetTab(tabId)
-    if not tab then return end
+    if not tab or T.RefuseReference(tab, "renamed") then return end
     StaticPopup_Show("QOL_TODO_NAME_TAB", "Rename tab:", nil, {
         initial = tab.name,
         onAccept = function(text) self:RenameTab(tabId, text) end,
@@ -67,7 +67,7 @@ end
 
 function T:ConfirmDeleteTab(tabId)
     local tab = self:GetTab(tabId)
-    if not tab then return end
+    if not tab or T.RefuseReference(tab, "deleted") then return end
     if #self.db.tabs <= 1 then
         return QoL:Print("you can't delete your only tab. Rename it instead.")
     end

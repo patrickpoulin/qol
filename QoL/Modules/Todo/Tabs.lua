@@ -12,8 +12,12 @@ local TAB_BACKDROP = {
     edgeSize = 1,
 }
 
-local function styleTab(button, selected)
-    if selected then
+local function styleTab(button, selected, reference)
+    if reference and not selected then
+        button:SetBackdropColor(0.25, 0.2, 0, 0.35)
+        button:SetBackdropBorderColor(0.8, 0.65, 0.2, 1)
+        button.text:SetFontObject("GameFontNormalSmall")
+    elseif selected then
         button:SetBackdropColor(0.2, 0.45, 0.8, 0.45)
         button:SetBackdropBorderColor(0.35, 0.6, 1, 1)
         button.text:SetFontObject("GameFontHighlightSmall")
@@ -34,6 +38,9 @@ local function createTabButton(self, parent)
     b.text:SetWordWrap(false)
     b:SetScript("OnClick", function(btn, mouse)
         if mouse == "RightButton" then
+            if self:GetTab(btn.tabId).reference then
+                return QoL:Print("built-in tabs can't be renamed or deleted.")
+            end
             QoL.ShowContextMenu(btn, {
                 { text = "Rename", func = function() self:PromptRenameTab(btn.tabId) end },
                 { text = "Delete", func = function() self:ConfirmDeleteTab(btn.tabId) end },
@@ -43,7 +50,9 @@ local function createTabButton(self, parent)
         end
     end)
     b:SetScript("OnDoubleClick", function(btn)
-        self:PromptRenameTab(btn.tabId)
+        if not self:GetTab(btn.tabId).reference then
+            self:PromptRenameTab(btn.tabId)
+        end
     end)
     return b
 end
@@ -75,18 +84,27 @@ function T:CreateTabStrip(parent)
     self.tabStrip = strip
 end
 
+-- Your own tabs first, then the built-in reference tabs.
+function T:GetStripTabs()
+    local list = {}
+    for _, tab in ipairs(self.db.tabs) do table.insert(list, tab) end
+    for _, tab in ipairs(self.referenceTabs) do table.insert(list, tab) end
+    return list
+end
+
 function T:RefreshTabs()
     local strip = self.tabStrip
     local active = self:GetActiveTab()
-    for i, tab in ipairs(self.db.tabs) do
+    local tabs = self:GetStripTabs()
+    for i, tab in ipairs(tabs) do
         local b = strip.buttons[i] or createTabButton(self, strip)
         strip.buttons[i] = b
         b.tabId = tab.id
         b.text:SetText(tab.name)
-        styleTab(b, tab == active)
+        styleTab(b, tab == active, tab.reference)
         b:Show()
     end
-    for i = #self.db.tabs + 1, #strip.buttons do
+    for i = #tabs + 1, #strip.buttons do
         strip.buttons[i]:Hide()
     end
     self:LayoutTabs()
@@ -109,7 +127,7 @@ function T:LayoutTabs()
         x = x + w + GAP
     end
 
-    for i = 1, #self.db.tabs do
+    for i = 1, #self:GetStripTabs() do
         local b = strip.buttons[i]
         if not b then return end
         local w = math.min(b.text:GetUnboundedStringWidth() + PAD, width)

@@ -122,11 +122,25 @@ function T:CreateTaskList(parent)
     empty:SetPoint("TOP", scroll, "TOP", 0, -12)
     empty:SetText("No tasks yet. Add one below.")
     self.emptyText = empty
+
+    self:CreateReferencePanel(parent)
 end
 
 function T:RefreshTasks()
     local tab = self:GetActiveTab()
     local rows = self.rows
+
+    -- Built-in tabs show read-only text instead of tasks.
+    self.scroll:SetShown(not tab.reference)
+    self.addBox:SetShown(not tab.reference)
+    if tab.reference then
+        self.emptyText:Hide()
+        for _, row in ipairs(rows) do row:Hide() end
+        self:ShowReference(tab)
+        return
+    end
+    self.refPanel:Hide()
+
     for i, task in ipairs(tab.tasks) do
         local row = rows[i] or createRow(self, self.scrollChild)
         rows[i] = row
@@ -152,6 +166,7 @@ end
 
 function T:LayoutTasks()
     if not self.scroll then return end
+    self:LayoutReference()
     local width = self:GetContentWidth() - SCROLLBAR_SPACE
     if not width or width <= 0 then return end
     local tab = self:GetActiveTab()

@@ -60,6 +60,9 @@ local function findTab(self, arg)
     for _, tab in ipairs(self.db.tabs) do
         if tab.name:lower() == lower then return tab end
     end
+    for _, tab in ipairs(self.referenceTabs) do
+        if tab.name:lower() == lower then return tab end
+    end
 end
 
 function T:OnSlash(args)
@@ -80,8 +83,9 @@ function T:OnSlash(args)
         self:SetCollapsed(false)
     elseif cmd == "add" then
         if rest == "" then return QoL:Print("usage: /qol todo add <text>") end
-        self:AddTask(self:GetActiveTab().id, rest)
-        QoL:Print(("added to %s: %s"):format(self:GetActiveTab().name, rest))
+        if self:AddTask(self:GetActiveTab().id, rest) then
+            QoL:Print(("added to %s: %s"):format(self:GetActiveTab().name, rest))
+        end
     elseif cmd == "clear" then
         local n = self:ClearCompleted(self:GetActiveTab().id)
         QoL:Print(("cleared %d completed task%s."):format(n, n == 1 and "" or "s"))

@@ -24,7 +24,16 @@ function T:GetTab(id)
     for i, tab in ipairs(self.db.tabs) do
         if tab.id == id then return tab, i end
     end
+    return self:GetReferenceTab(id)
 end
+
+local function refuseReference(tab, action)
+    if tab and tab.reference then
+        QoL:Print(("%s is a built-in tab and can't be %s."):format(tab.name, action))
+        return true
+    end
+end
+T.RefuseReference = refuseReference
 
 function T:GetActiveTab()
     return self:GetTab(self.charDB.activeTabId) or self.db.tabs[1]
@@ -48,6 +57,7 @@ end
 
 function T:RenameTab(id, name)
     local tab = self:GetTab(id)
+    if refuseReference(tab, "renamed") then return end
     name = clean(name, MAX_NAME)
     if tab and name ~= "" then
         tab.name = name
@@ -56,11 +66,12 @@ function T:RenameTab(id, name)
 end
 
 function T:DeleteTab(id)
+    local tab, index = self:GetTab(id)
+    if refuseReference(tab, "deleted") then return false end
     if #self.db.tabs <= 1 then
         QoL:Print("you can't delete your only tab. Rename it instead.")
         return false
     end
-    local _, index = self:GetTab(id)
     if not index then return false end
     table.remove(self.db.tabs, index)
     if self.charDB.activeTabId == id then
@@ -81,6 +92,7 @@ end
 
 function T:AddTask(tabId, text)
     local tab = self:GetTab(tabId)
+    if refuseReference(tab, "given tasks") then return end
     text = clean(text, 200)
     if not tab or text == "" then return end
     local task = { id = newId(self), text = text, done = false, created = time() }
@@ -129,7 +141,7 @@ end
 -- Delete every ticked task on a tab. Returns how many were removed.
 function T:ClearCompleted(tabId)
     local tab = self:GetTab(tabId)
-    if not tab then return 0 end
+    if not tab or tab.reference then return 0 end
     local kept, removed = {}, 0
     for _, task in ipairs(tab.tasks) do
         if task.done then
