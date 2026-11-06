@@ -1,0 +1,31 @@
+name: Release
+
+# Push a tag like v0.1.0 to build QoL-v0.1.0-forever.zip and publish a
+# GitHub release. WowUp installs from that release asset.
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set version in TOC
+        run: sed -i "s/^## Version: .*/## Version: ${GITHUB_REF_NAME#v}/" QoL/QoL.toc
+
+      - name: Build zip
+        run: |
+          mkdir -p dist
+          zip -r "dist/QoL-${GITHUB_REF_NAME}-forever.zip" QoL
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.zip
+          generate_release_notes: true

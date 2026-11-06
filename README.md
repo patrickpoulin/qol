@@ -31,7 +31,7 @@ An on-screen to-do list.
 
 ## Install
 
-1. Copy the `QoL` folder into `World of Warcraft/_forever_/Interface/AddOns/`.
+1. With WowUp: Get Addons, Install from URL, `https://github.com/patrickpoulin/qol`. Or by hand: copy the `QoL` folder into `World of Warcraft/_forever_/Interface/AddOns/`.
 2. Restart the game, or type `/reload` if it is already running.
 3. Type `/qol` in chat.
 
@@ -42,3 +42,7 @@ The TOC targets interface `16001`. If the game lists QoL as out of date after a 
 - Each feature is a module in `QoL/Modules/<Name>/` that calls `QoL:RegisterModule(key, module)` (see `QoL/Core.lua`). Add its files to `QoL/QoL.toc`.
 - Saved data: `QoLDB.modules.<key>` (account-wide) and `QoLCharDB.<key>` (per character).
 - Lint with `luacheck QoL`. CI runs this on every push.
+
+## Releasing
+
+Push a tag such as `v0.1.1`. The Release workflow builds `QoL-v0.1.1-forever.zip` and publishes it as a GitHub release, which WowUp installs from (add the addon in WowUp with `https://github.com/patrickpoulin/qol`).
