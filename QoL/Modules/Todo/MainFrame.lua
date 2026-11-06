@@ -4,6 +4,7 @@ local QoL = ns.QoL
 local T = ns.Todo
 
 local TITLE_HEIGHT = 26
+local CONTENT_INSET = 6 -- content frame inset on each side
 local COLLAPSED_WIDTH = 110
 local MIN_W, MIN_H, MAX_W, MAX_H = 200, 160, 600, 900
 
@@ -29,6 +30,13 @@ local function anchorTopLeft(f)
     if not left or not top then return end
     f:ClearAllPoints()
     f:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", left, top)
+end
+
+-- Width available inside the window, worked out from the window's own size.
+-- Child frames' sizes can lag a frame behind a resize, so layout uses this.
+function T:GetContentWidth()
+    return self.charDB.collapsed and self.charDB.width - 2 * CONTENT_INSET
+        or self.frame:GetWidth() - 2 * CONTENT_INSET
 end
 
 function T:SavePosition()
@@ -81,6 +89,8 @@ function T:SetCollapsed(collapsed)
         f:SetSize(self.charDB.width, self.charDB.height)
         f.content:Show()
         f.grip:SetShown(not self.charDB.locked)
+        if self.LayoutTabs then self:LayoutTabs() end
+        if self.LayoutTasks then self:LayoutTasks() end
         setArrow(f.collapseButton, false)
     end
     self:UpdateTitle()
@@ -161,8 +171,8 @@ function T:CreateMainFrame()
 
     -- Everything below the title bar; hidden when collapsed.
     local content = CreateFrame("Frame", nil, f)
-    content:SetPoint("TOPLEFT", f, "TOPLEFT", 6, -TITLE_HEIGHT)
-    content:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -6, 6)
+    content:SetPoint("TOPLEFT", f, "TOPLEFT", CONTENT_INSET, -TITLE_HEIGHT)
+    content:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -CONTENT_INSET, CONTENT_INSET)
     f.content = content
 
     -- Resize grip in the bottom-right corner.
@@ -186,6 +196,7 @@ function T:CreateMainFrame()
     f.grip = grip
 
     f:SetScript("OnSizeChanged", function()
+        if self.charDB.collapsed then return end
         if self.LayoutTabs then self:LayoutTabs() end
         if self.LayoutTasks then self:LayoutTasks() end
     end)

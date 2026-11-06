@@ -152,7 +152,7 @@ end
 
 function T:LayoutTasks()
     if not self.scroll then return end
-    local width = self.scroll:GetWidth()
+    local width = self:GetContentWidth() - SCROLLBAR_SPACE
     if not width or width <= 0 then return end
     local tab = self:GetActiveTab()
     local child = self.scrollChild

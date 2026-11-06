@@ -96,7 +96,7 @@ end
 function T:LayoutTabs()
     local strip = self.tabStrip
     if not strip then return end
-    local width = strip:GetWidth()
+    local width = self:GetContentWidth()
     if not width or width <= 0 then return end
 
     local x, row = 0, 0
