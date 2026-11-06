@@ -14,6 +14,15 @@ local BACKDROP = {
     insets = { left = 3, right = 3, top = 3, bottom = 3 },
 }
 
+-- Expand/collapse arrow: points right when collapsed, down when expanded.
+local ARROW_TEXTURE = "Interface\\ChatFrame\\ChatFrameExpandArrow"
+
+local function setArrow(button, collapsed)
+    local rotation = collapsed and 0 or -math.pi / 2
+    button.arrow:SetRotation(rotation)
+    button.glow:SetRotation(rotation)
+end
+
 -- Always anchor by the top-left corner so collapsing keeps the title in place.
 local function anchorTopLeft(f)
     local left, top = f:GetLeft(), f:GetTop()
@@ -66,13 +75,13 @@ function T:SetCollapsed(collapsed)
         f.grip:Hide()
         f:SetResizeBounds(COLLAPSED_WIDTH, TITLE_HEIGHT, COLLAPSED_WIDTH, TITLE_HEIGHT)
         f:SetSize(COLLAPSED_WIDTH, TITLE_HEIGHT)
-        f.collapseButton:SetText("+")
+        setArrow(f.collapseButton, true)
     else
         f:SetResizeBounds(MIN_W, MIN_H, MAX_W, MAX_H)
         f:SetSize(self.charDB.width, self.charDB.height)
         f.content:Show()
         f.grip:SetShown(not self.charDB.locked)
-        f.collapseButton:SetText("-")
+        setArrow(f.collapseButton, false)
     end
     self:UpdateTitle()
 end
@@ -84,15 +93,6 @@ end
 
 function T:UpdateTitle()
     self.frame.title:SetText("QoL")
-end
-
-local function makeTitleButton(parent, text)
-    local b = CreateFrame("Button", nil, parent)
-    b:SetSize(20, 20)
-    b:SetNormalFontObject("GameFontHighlightLarge")
-    b:SetHighlightFontObject("GameFontNormalLarge")
-    b:SetText(text)
-    return b
 end
 
 function T:CreateMainFrame()
@@ -126,23 +126,35 @@ function T:CreateMainFrame()
         self:SetCollapsed(not self.charDB.collapsed)
     end)
 
-    local close = makeTitleButton(bar, "x")
-    close:SetPoint("RIGHT", bar, "RIGHT", 0, 0)
+    -- Windows-style close button in the top-right corner.
+    local close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
+    close:SetSize(24, 24)
+    close:SetPoint("TOPRIGHT", f, "TOPRIGHT", 0, 0)
+    close:SetFrameLevel(bar:GetFrameLevel() + 2)
     close:SetScript("OnClick", function()
         self:SetShown(false)
         QoL:Print("hidden. Type /qol to show it again.")
     end)
 
-    local collapse = makeTitleButton(bar, "-")
-    collapse:SetPoint("RIGHT", close, "LEFT", -2, 0)
+    -- Collapse/expand triangle at the left of the title.
+    local collapse = CreateFrame("Button", nil, bar)
+    collapse:SetSize(14, 14)
+    collapse:SetPoint("LEFT", bar, "LEFT", 2, 0)
+    collapse.arrow = collapse:CreateTexture(nil, "ARTWORK")
+    collapse.arrow:SetAllPoints()
+    collapse.arrow:SetTexture(ARROW_TEXTURE)
+    collapse.glow = collapse:CreateTexture(nil, "HIGHLIGHT")
+    collapse.glow:SetAllPoints()
+    collapse.glow:SetTexture(ARROW_TEXTURE)
+    collapse.glow:SetBlendMode("ADD")
     collapse:SetScript("OnClick", function()
         self:SetCollapsed(not self.charDB.collapsed)
     end)
     f.collapseButton = collapse
 
     local title = bar:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    title:SetPoint("LEFT", bar, "LEFT", 6, 0)
-    title:SetPoint("RIGHT", collapse, "LEFT", -4, 0)
+    title:SetPoint("LEFT", collapse, "RIGHT", 4, 0)
+    title:SetPoint("RIGHT", bar, "RIGHT", -24, 0)
     title:SetJustifyH("LEFT")
     title:SetWordWrap(false)
     f.title = title
