@@ -33,3 +33,20 @@ function QoL.GetPopupEditBox(popup)
     if popup.GetEditBox then return popup:GetEditBox() end
     return popup.EditBox or popup.editBox
 end
+
+-- Bags and items. Newer clients moved these into C_Container / C_Item.
+local C_Container, C_Item = _G.C_Container, _G.C_Item
+
+QoL.GetContainerNumSlots = (C_Container and C_Container.GetContainerNumSlots) or _G.GetContainerNumSlots
+QoL.GetContainerItemLink = (C_Container and C_Container.GetContainerItemLink) or _G.GetContainerItemLink
+QoL.GetContainerNumFreeSlots = (C_Container and C_Container.GetContainerNumFreeSlots) or _G.GetContainerNumFreeSlots
+QoL.GetItemInfoInstant = (C_Item and C_Item.GetItemInfoInstant) or _G.GetItemInfoInstant
+QoL.GetItemCount = (C_Item and C_Item.GetItemCount) or _G.GetItemCount
+
+-- Item name, or nil while the client is still loading it.
+function QoL.GetItemName(item)
+    local getInfo = (C_Item and C_Item.GetItemInfo) or _G.GetItemInfo
+    return (getInfo(item))
+end
+
+QoL.NUM_BAGS = _G.NUM_BAG_SLOTS or 4 -- backpack is bag 0, then bags 1..NUM_BAGS

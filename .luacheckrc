@@ -18,6 +18,9 @@ read_globals = {
     "StaticPopup_Show", "MenuUtil",
     "UIDropDownMenu_Initialize", "UIDropDownMenu_CreateInfo",
     "UIDropDownMenu_AddButton", "ToggleDropDownMenu",
+    -- Items, gear and combat
+    "GetInventoryItemID", "GetInventoryItemLink", "GetWeaponEnchantInfo",
+    "EquipItemByName", "InCombatLockdown", "C_Timer",
     -- Global strings
     "ACCEPT", "CANCEL", "YES", "NO",
 }

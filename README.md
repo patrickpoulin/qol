@@ -30,6 +30,21 @@ An on-screen to-do list.
 | `/qol todo lock` / `unlock` | Stop or allow moving and resizing |
 | `/qol todo reset` | Move the window back to the centre |
 
+### Fishing (`/qol fish`)
+
+A built-in **Fishing** tab in the QoL window, next to Professions.
+
+- Shows the fishing pole you have equipped or in your bags.
+- One button swaps your weapons for the pole. Press it again to put your main hand and off-hand back.
+- Shows how long the lure on your pole has left.
+- Lists the lures you carry (Shiny Bauble, Nightcrawlers, Aquadynamic Fish Lens, Bright Baubles, Flesh Eating Worm, Aquadynamic Fish Attractor) with how many you have. Click one to put it on your pole.
+- Swapping and lures don't work in combat. The lure buttons come back when the fight ends.
+
+| Command | What it does |
+| --- | --- |
+| `/qol fish` | Swap to your fishing pole, or back to your weapons. Works in a macro too |
+| `/qol fish tab` | Open the Fishing tab |
+
 ## Install
 
 1. With WowUp: Get Addons, Install from URL, `https://github.com/patrickpoulin/qol`. Or by hand: copy the `QoL` folder into `World of Warcraft/_forever_/Interface/AddOns/`.
