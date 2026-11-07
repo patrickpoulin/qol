@@ -159,7 +159,18 @@ function T:AttachToPlate()
     if f.plate ~= plate then
         f:SetParent(plate)
         f:ClearAllPoints()
-        f:SetPoint("BOTTOM", plate, "TOP", 0, 2)
+        -- Sit right on the name; the plate frame itself reaches well above it.
+        -- Other nameplate addons (e.g. Plater) may not have these fields.
+        local uf = plate.UnitFrame
+        local name = uf and (uf.name or uf.Name)
+        local bar = uf and (uf.healthBar or uf.HealthBar)
+        if name and name.IsShown and name:IsShown() then
+            f:SetPoint("BOTTOM", name, "TOP", 0, 0)
+        elseif bar then
+            f:SetPoint("BOTTOM", bar, "TOP", 0, 14)
+        else
+            f:SetPoint("CENTER", plate, "CENTER", 0, 20)
+        end
         f:SetFrameLevel(plate:GetFrameLevel() + 10)
         f.plate = plate
     end
