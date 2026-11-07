@@ -182,10 +182,10 @@ function T:RefreshFishing()
 
     local state, reason = F:GetSwapState()
     if state == "equip" then
-        panel.swap:SetText("Equip fishing pole")
+        panel.swap:SetText("Equip Fishing Pole")
     elseif state == "unequip" then
         local name = QoL.GetItemName(F.charDB.mainHand)
-        panel.swap:SetText(name and ("Swap back to " .. name) or "Swap back to weapons")
+        panel.swap:SetText(name and ("Swap Back to " .. name) or "Swap Back to Weapons")
     else
         panel.swap:SetText(reason)
     end

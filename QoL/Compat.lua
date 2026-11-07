@@ -56,6 +56,7 @@ local C_Container, C_Item = _G.C_Container, _G.C_Item
 QoL.GetContainerNumSlots = (C_Container and C_Container.GetContainerNumSlots) or _G.GetContainerNumSlots
 QoL.GetContainerItemLink = (C_Container and C_Container.GetContainerItemLink) or _G.GetContainerItemLink
 QoL.GetContainerNumFreeSlots = (C_Container and C_Container.GetContainerNumFreeSlots) or _G.GetContainerNumFreeSlots
+QoL.PickupContainerItem = (C_Container and C_Container.PickupContainerItem) or _G.PickupContainerItem
 QoL.GetItemInfoInstant = (C_Item and C_Item.GetItemInfoInstant) or _G.GetItemInfoInstant
 QoL.GetItemCount = (C_Item and C_Item.GetItemCount) or _G.GetItemCount
 

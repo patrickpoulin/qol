@@ -6,6 +6,7 @@ local QoL = ns.QoL
 local MAIN_HAND, OFF_HAND = 16, 17
 local WEAPON_CLASS, FISHING_POLE_SUBCLASS = 2, 20
 local OFF_HAND_DELAY = 0.5 -- seconds; lets the main-hand swap finish first
+local CHECK_DELAY = 1.5 -- seconds; then check that the swap went through
 
 local F = QoL:RegisterModule("fish", {
     name = "Fishing",
@@ -17,6 +18,7 @@ local F = QoL:RegisterModule("fish", {
     slashHelp = {
         "/qol fish - swap to your fishing pole, or back to your weapons",
         "/qol fish tab - open the Fishing tab",
+        "/qol fish debug - print what QoL sees, to help fix swap problems",
     },
 })
 ns.Fishing = F
@@ -47,16 +49,58 @@ function F:GetEquippedPoleLink()
     end
 end
 
--- First fishing pole found in your bags, as an item link.
-function F:FindPoleInBags()
+-- First bag item that passes `test(link)`: returns link, bag, slot.
+local function findInBags(test)
     for bag = 0, QoL.NUM_BAGS do
         for slot = 1, QoL.GetContainerNumSlots(bag) or 0 do
             local link = QoL.GetContainerItemLink(bag, slot)
-            if link and self.IsFishingPole(link) then
-                return link
+            if link and test(link) then
+                return link, bag, slot
             end
         end
     end
+end
+
+local function itemID(link)
+    return link and tonumber(link:match("item:(%d+)"))
+end
+
+-- First fishing pole found in your bags: link, bag, slot.
+function F:FindPoleInBags()
+    return findInBags(self.IsFishingPole)
+end
+
+-- A saved weapon in your bags: the exact item if it's there, else one with the same ID.
+local function findSaved(link)
+    local found, bag, slot = findInBags(function(l) return l == link end)
+    if found then return found, bag, slot end
+    local id = itemID(link)
+    return findInBags(function(l) return itemID(l) == id end)
+end
+
+-- Put the item in bag/slot into an equipment slot, like dragging it onto the
+-- character window. Whatever was in that slot goes back into the bag.
+local function equipFromBag(bag, slot, invSlot)
+    ClearCursor()
+    QoL.PickupContainerItem(bag, slot)
+    PickupInventoryItem(invSlot)
+    ClearCursor()
+end
+
+-- Watch for an error message from the game while a swap is running.
+local errorWatch = CreateFrame("Frame")
+errorWatch:SetScript("OnEvent", function(_, _, ...)
+    local msg
+    for i = 1, select("#", ...) do
+        local v = select(i, ...)
+        if type(v) == "string" then msg = v end
+    end
+    if msg then QoL:Print("the game said: " .. msg) end
+end)
+
+local function watchErrors()
+    errorWatch:RegisterEvent("UI_ERROR_MESSAGE")
+    C_Timer.After(CHECK_DELAY, function() errorWatch:UnregisterEvent("UI_ERROR_MESSAGE") end)
 end
 
 local function freeBagSlots()
@@ -80,10 +124,10 @@ end
 function F:GetSwapState()
     if self:IsPoleEquipped() then
         if self.charDB.mainHand then return "unequip" end
-        return nil, "Equip your weapon by hand"
+        return nil, "Equip Your Weapon by Hand"
     end
     if self:FindPoleInBags() then return "equip" end
-    return nil, "No fishing pole in your bags"
+    return nil, "No Fishing Pole in Your Bags"
 end
 
 function F:Swap()
@@ -98,15 +142,30 @@ function F:Swap()
         if offHand and freeBagSlots() < 1 then
             return QoL:Print("your bags are full, so there's no room for your off-hand.")
         end
+        local _, bag, slot = self:FindPoleInBags()
         self.charDB.mainHand, self.charDB.offHand = mainHand, offHand
-        EquipItemByName(self:FindPoleInBags(), MAIN_HAND)
+        watchErrors()
+        equipFromBag(bag, slot, MAIN_HAND)
+        C_Timer.After(CHECK_DELAY, function()
+            if not self:IsPoleEquipped() then
+                self.charDB.mainHand, self.charDB.offHand = nil, nil
+                QoL:Print("the pole didn't equip. Type /qol fish debug and send what it prints.")
+            end
+        end)
     elseif state == "unequip" then
         local mainHand, offHand = self.charDB.mainHand, self.charDB.offHand
+        local _, bag, slot = findSaved(mainHand)
+        if not bag then
+            return QoL:Print(("can't find %s in your bags."):format(mainHand))
+        end
         self.charDB.mainHand, self.charDB.offHand = nil, nil
-        EquipItemByName(mainHand, MAIN_HAND)
+        watchErrors()
+        equipFromBag(bag, slot, MAIN_HAND)
         if offHand then
             C_Timer.After(OFF_HAND_DELAY, function()
-                if not InCombatLockdown() then EquipItemByName(offHand, OFF_HAND) end
+                if InCombatLockdown() then return end
+                local _, offBag, offSlot = findSaved(offHand)
+                if offBag then equipFromBag(offBag, offSlot, OFF_HAND) end
             end)
         end
     else
@@ -114,10 +173,43 @@ function F:Swap()
     end
 end
 
+local function describe(item)
+    if not item then return "nothing" end
+    local _, itemType, subType, _, _, classID, subclassID = QoL.GetItemInfoInstant(item)
+    return ("%s (%s / %s, class %s, subclass %s)"):format(
+        tostring(item), tostring(itemType), tostring(subType), tostring(classID), tostring(subclassID))
+end
+
+function F:PrintDebug()
+    local p = function(...) print("  " .. string.format(...)) end
+    QoL:Print("fishing debug")
+    p("client build %s, interface %s", tostring((select(2, GetBuildInfo()))), tostring((select(4, GetBuildInfo()))))
+    p("C_Container: %s, PickupContainerItem: %s, GetItemInfoInstant: %s",
+        tostring(_G.C_Container ~= nil), tostring(QoL.PickupContainerItem ~= nil), tostring(QoL.GetItemInfoInstant ~= nil))
+    p("in combat: %s", tostring(InCombatLockdown()))
+    p("main hand: %s", describe(GetInventoryItemLink("player", MAIN_HAND)))
+    p("off hand: %s", describe(GetInventoryItemLink("player", OFF_HAND)))
+    p("pole equipped: %s", tostring(self:IsPoleEquipped()))
+    local link, bag, slot = self:FindPoleInBags()
+    p("pole in bags: %s", link and ("%s at bag %d slot %d"):format(link, bag, slot) or "none found")
+    if not link then
+        -- Show every weapon in the bags so we can see how the pole is classed.
+        findInBags(function(l)
+            local _, _, _, _, _, classID = QoL.GetItemInfoInstant(l)
+            if classID == WEAPON_CLASS then p("bag weapon: %s", describe(l)) end
+        end)
+    end
+    local state, reason = self:GetSwapState()
+    p("swap state: %s", tostring(state or reason))
+    p("saved weapons: %s / %s", tostring(self.charDB.mainHand), tostring(self.charDB.offHand))
+end
+
 function F:OnSlash(args)
     local cmd = (args or ""):lower()
     if cmd == "" or cmd == "swap" then
         self:Swap()
+    elseif cmd == "debug" then
+        self:PrintDebug()
     elseif cmd == "tab" then
         local todo = ns.Todo
         todo:SetShown(true)

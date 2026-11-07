@@ -44,6 +44,7 @@ A built-in **Fishing** tab in the QoL window, next to Campfires.
 | --- | --- |
 | `/qol fish` | Swap to your fishing pole, or back to your weapons. Works in a macro too |
 | `/qol fish tab` | Open the Fishing tab |
+| `/qol fish debug` | Print what QoL sees (pole, weapons, bags) to help fix swap problems |
 
 ## Install
 
