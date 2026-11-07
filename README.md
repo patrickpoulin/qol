@@ -32,7 +32,7 @@ An on-screen to-do list.
 
 ### Fishing (`/qol fish`)
 
-A built-in **Fishing** tab in the QoL window, next to Professions.
+A built-in **Fishing** tab in the QoL window, next to Campfires.
 
 - Shows the fishing pole you have equipped or in your bags.
 - One button swaps your weapons for the pole. Press it again to put your main hand and off-hand back.

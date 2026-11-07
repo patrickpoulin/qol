@@ -58,7 +58,7 @@ end
 
 function T:CreateFishingPanel(parent)
     local F = ns.Fishing
-    local scroll = CreateFrame("ScrollFrame", nil, parent, "UIPanelScrollFrameTemplate")
+    local scroll = QoL.CreateScrollFrame(parent)
     scroll:SetPoint("TOPLEFT", self.tabStrip, "BOTTOMLEFT", 0, -6)
     scroll:SetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT", -SCROLLBAR_SPACE, 4)
     local child = CreateFrame("Frame", nil, scroll)
