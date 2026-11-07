@@ -1,5 +1,8 @@
--- Zeppelins: pins on the world map and minimap for every zeppelin dock,
--- with a tooltip that says where each one goes.
+-- Zeppelins and boats: pins on the world map and minimap for every zeppelin
+-- and boat dock, with a tooltip that says where each one goes.
+--
+-- Boat docks marked approx have no NPC standing on them in Questie's data,
+-- so their spots are estimates; /qol zeppelins here fixes one in game.
 --
 -- Dock positions are the zeppelin masters' spots on the zone map. They come
 -- from Questie's NPC database, whose Forever data has the same positions for
@@ -14,16 +17,24 @@ local PIN_SIZE = 16
 local MINIMAP_PIN_SIZE = 14
 local ICON = "Interface\\TaxiFrame\\UI-Taxi-Icon-White"
 local PIN_COLOR = { 0.35, 0.85, 1 }
+local BOAT_COLOR = { 1, 0.75, 0.3 }
+
+local function colorOf(tower)
+    return tower.boat and BOAT_COLOR or PIN_COLOR
+end
 
 local Z = QoL:RegisterModule("zeppelins", {
     name = "Zeppelins",
-    description = "show zeppelin docks and where they go on the map and minimap",
+    description = "show zeppelin and boat docks and where they go on the map and minimap",
     defaults = {
         enabled = true,
+        boats = true,
         moved = {}, -- dock id -> { x, y } set with /qol zeppelins here
     },
     slashHelp = {
         "/qol zeppelins - turn the zeppelin pins on or off",
+        "/qol zeppelins boats - turn the boat pins on or off",
+        "/qol zeppelins where - print the map and spot you are standing on",
         "/qol zeppelins list - print every zeppelin dock and where it goes",
         "/qol zeppelins here - stand on a platform to move its pin to where you are",
         "/qol zeppelins reset - put every pin back where QoL had it",
@@ -40,6 +51,12 @@ local MAPS = {
     stranglethorn = { id = 1434, name = "Stranglethorn Vale" },
     mulgore = { id = 1412, name = "Mulgore" },
     alterac = { id = 1416, name = "Alterac Mountains" },
+    barrens = { id = 1413, name = "The Barrens" },
+    wetlands = { id = 1437, name = "Wetlands" },
+    teldrassil = { id = 1438, name = "Teldrassil" },
+    darkshore = { id = 1439, name = "Darkshore" },
+    feralas = { id = 1444, name = "Feralas" },
+    dustwallow = { id = 1445, name = "Dustwallow Marsh" },
 }
 
 -- One entry per tower; each platform at it has its own zeppelin.
@@ -82,7 +99,74 @@ Z.towers = {
             { x = 12.5, y = 51.8, to = "Valanaar", toWhere = "Zephras Isle", kind = "Skyboat" },
         },
     },
+
+    -- Boats. Spots come from NPCs that stand on each pier in Questie's data,
+    -- except the ones marked approx.
+    {
+        name = "Ratchet dock", map = "barrens", boat = true,
+        where = "Ratchet, The Barrens",
+        docks = {
+            { x = 63.35, y = 38.45, to = "Booty Bay", toWhere = "Stranglethorn Vale", kind = "Boat" },
+        },
+    },
+    {
+        name = "Booty Bay dock", map = "stranglethorn", boat = true,
+        where = "Booty Bay, Stranglethorn Vale",
+        docks = {
+            { x = 26.35, y = 73.56, to = "Ratchet", toWhere = "The Barrens", kind = "Boat" },
+        },
+    },
+    {
+        name = "Menethil Harbor docks", map = "wetlands", boat = true,
+        where = "Menethil Harbor, Wetlands",
+        docks = {
+            { x = 5.0, y = 57.06, to = "Auberdine", toWhere = "Darkshore", kind = "Boat",
+                note = "In Forever this boat stops at Southshore first." },
+            { x = 5.31, y = 63.8, to = "Theramore", toWhere = "Dustwallow Marsh", kind = "Boat" },
+        },
+    },
+    {
+        name = "Theramore dock", map = "dustwallow", boat = true,
+        where = "Theramore Isle, Dustwallow Marsh",
+        docks = {
+            { x = 71.28, y = 56.29, to = "Menethil Harbor", toWhere = "Wetlands", kind = "Boat" },
+        },
+    },
+    {
+        name = "Auberdine docks", map = "darkshore", boat = true, approx = true,
+        where = "Auberdine, Darkshore",
+        docks = {
+            { x = 33.2, y = 40.2, to = "Rut'theran Village", toWhere = "Teldrassil", kind = "Boat" },
+            { x = 32.4, y = 43.8, to = "Menethil Harbor", toWhere = "Wetlands", kind = "Boat" },
+        },
+    },
+    {
+        name = "Rut'theran Village dock", map = "teldrassil", boat = true, approx = true,
+        where = "Rut'theran Village, Teldrassil",
+        docks = {
+            { x = 55.0, y = 96.5, to = "Auberdine", toWhere = "Darkshore", kind = "Boat" },
+        },
+    },
+    {
+        name = "Feathermoon ferry", map = "feralas", boat = true, approx = true,
+        where = "Feathermoon Stronghold, Feralas",
+        docks = {
+            { x = 31.0, y = 39.9, to = "the Forgotten Coast", toWhere = "Feralas", kind = "Ferry" },
+        },
+    },
+    {
+        name = "Forgotten Coast ferry", map = "feralas", boat = true, approx = true,
+        where = "The Forgotten Coast, Feralas",
+        docks = {
+            { x = 43.3, y = 42.8, to = "Feathermoon Stronghold", toWhere = "Feralas", kind = "Ferry" },
+        },
+    },
 }
+
+function Z:IsTowerShown(tower)
+    if tower.boat then return self.db.boats end
+    return self.db.enabled
+end
 
 ---------------------------------------------------------------------------
 -- Positions
@@ -165,17 +249,24 @@ local function addDockLines(dock)
     if dock.master then
         GameTooltip:AddLine("  zeppelin master: " .. dock.master, 0.7, 0.7, 0.7)
     end
+    if dock.note then
+        GameTooltip:AddLine("  " .. dock.note, 0.7, 0.7, 0.7, true)
+    end
 end
 
 local function showTooltip(pin)
     GameTooltip:SetOwner(pin, "ANCHOR_RIGHT")
     local tower = pin.tower
-    GameTooltip:SetText(tower.name, PIN_COLOR[1], PIN_COLOR[2], PIN_COLOR[3])
+    local c = colorOf(tower)
+    GameTooltip:SetText(tower.name, c[1], c[2], c[3])
     GameTooltip:AddLine(tower.where, 0.8, 0.8, 0.8)
     if pin.dock then
         addDockLines(pin.dock)
     else
         for _, dock in ipairs(tower.docks) do addDockLines(dock) end
+    end
+    if tower.approx then
+        GameTooltip:AddLine("Spot is approximate. Stand on the dock and type /qol zeppelins here to fix it.", 1, 0.5, 0.5, true)
     end
     if tower.unconfirmed then
         GameTooltip:AddLine("Forever only. Spot taken from community maps, not checked in game.", 1, 0.5, 0.5, true)
@@ -195,6 +286,12 @@ local function createPin(parent, size)
     pin:SetScript("OnLeave", GameTooltip_Hide)
     pin:Hide()
     return pin
+end
+
+local function setPinTower(pin, tower, dock)
+    pin.tower, pin.dock = tower, dock
+    local c = colorOf(tower)
+    pin.icon:SetVertexColor(c[1], c[2], c[3])
 end
 
 ---------------------------------------------------------------------------
@@ -231,7 +328,7 @@ function Z:RefreshWorldMap()
     if not (wm and canvas and wm.GetMapID and C_Map) then return end
     local used = 0
     local mapID = wm:GetMapID()
-    if self.db.enabled and mapID and wm:IsShown() then
+    if (self.db.enabled or self.db.boats) and mapID and wm:IsShown() then
         local width, height = canvas:GetWidth(), canvas:GetHeight()
         local scale = 1
         if wm.ScrollContainer and wm.ScrollContainer.GetCanvasScale then
@@ -239,9 +336,12 @@ function Z:RefreshWorldMap()
         end
         local overview = isOverviewMap(mapID)
         for _, tower in ipairs(self.towers) do
-            local groups = overview and { { dock = nil, at = tower.docks[1] } } or nil
-            if not groups then
-                groups = {}
+            local groups = {}
+            if not self:IsTowerShown(tower) then
+                groups = {} -- this kind of pin is turned off
+            elseif overview then
+                groups[1] = { dock = nil, at = tower.docks[1] }
+            else
                 for _, dock in ipairs(tower.docks) do groups[#groups + 1] = { dock = dock, at = dock } end
             end
             for _, g in ipairs(groups) do
@@ -252,7 +352,7 @@ function Z:RefreshWorldMap()
                 if x then
                     used = used + 1
                     local pin = self:AcquireWorldPin(used)
-                    pin.tower, pin.dock = tower, g.dock
+                    setPinTower(pin, tower, g.dock)
                     -- Keep the pin the same size on screen however far the map is zoomed.
                     pin:SetScale(1 / scale)
                     pin:ClearAllPoints()
@@ -283,8 +383,9 @@ function Z:HookWorldMap()
             and wm.ScrollContainer:GetCanvasScale() or 1
         local mapID = wm:GetMapID()
         local w = canvas:GetWidth()
-        if mapID ~= last.mapID or scale ~= last.scale or w ~= last.w or Z.db.enabled ~= last.enabled then
-            last.mapID, last.scale, last.w, last.enabled = mapID, scale, w, Z.db.enabled
+        local shown = (Z.db.enabled and 1 or 0) + (Z.db.boats and 2 or 0)
+        if mapID ~= last.mapID or scale ~= last.scale or w ~= last.w or shown ~= last.shown then
+            last.mapID, last.scale, last.w, last.shown = mapID, scale, w, shown
             Z:RefreshWorldMap()
         end
     end)
@@ -308,7 +409,7 @@ function Z:CreateMinimapPins()
         for _, dock in ipairs(tower.docks) do
             local pin = createPin(_G.Minimap, MINIMAP_PIN_SIZE)
             pin:SetFrameLevel(_G.Minimap:GetFrameLevel() + 5)
-            pin.tower, pin.dock = tower, dock
+            setPinTower(pin, tower, dock)
             self.minimapPins[#self.minimapPins + 1] = pin
         end
     end
@@ -320,7 +421,7 @@ end
 
 function Z:UpdateMinimap()
     local minimap = _G.Minimap
-    if not (self.db.enabled and minimap and minimap:IsVisible() and _G.UnitPosition) then
+    if not ((self.db.enabled or self.db.boats) and minimap and minimap:IsVisible() and _G.UnitPosition) then
         hideMinimapPins()
         return
     end
@@ -342,7 +443,7 @@ function Z:UpdateMinimap()
     for _, pin in ipairs(self.minimapPins) do
         local w = worldPos(pin.dock, resolveMap(pin.tower.map))
         local shown = false
-        if w and w.continent == instance then
+        if w and w.continent == instance and self:IsTowerShown(pin.tower) then
             -- World X grows to the north and world Y to the west.
             local dx, dy = py - w.y, w.x - px -- yards east, yards north
             if rotate then
@@ -447,6 +548,24 @@ function Z:MoveNearestDockHere()
         (best.kind or "zeppelin"):lower(), best.to, x, y))
 end
 
+function Z:SetBoatsEnabled(on)
+    self.db.boats = on
+    self:UpdateMinimap()
+    self:RefreshWorldMap()
+    if ns.Todo and ns.Todo.RefreshHelpers then ns.Todo:RefreshHelpers() end
+end
+
+function Z:PrintWhere()
+    local mapID = C_Map.GetBestMapForUnit and C_Map.GetBestMapForUnit("player")
+    local pos = mapID and C_Map.GetPlayerMapPosition and C_Map.GetPlayerMapPosition(mapID, "player")
+    if not pos then
+        QoL:Print("can't read your map position here.")
+        return
+    end
+    local x, y = pos:GetXY()
+    QoL:Print(("you are at %.2f, %.2f on %s (map %d)."):format(x * 100, y * 100, tostring(mapName(mapID)), mapID))
+end
+
 function Z:SetEnabled(on)
     self.db.enabled = on
     self:UpdateMinimap()
@@ -455,10 +574,10 @@ function Z:SetEnabled(on)
 end
 
 function Z:PrintList()
-    QoL:Print("zeppelin docks:")
+    QoL:Print("zeppelin and boat docks:")
     for _, tower in ipairs(self.towers) do
         print(("  |cffffd100%s|r - %s%s"):format(tower.name, tower.where,
-            tower.unconfirmed and " (Forever, not checked in game)" or ""))
+            tower.unconfirmed and " (Forever, not checked in game)" or tower.approx and " (approximate)" or ""))
         for _, dock in ipairs(tower.docks) do
             print(("    %.1f, %.1f: %s to %s, %s%s"):format(dock.x, dock.y, dock.kind or "Zeppelin",
                 dock.to, dock.toWhere, dock.master and (" (" .. dock.master .. ")") or ""))
@@ -499,6 +618,15 @@ function Z:OnSlash(args)
             self:SetEnabled(cmd == "on")
         end
         QoL:Print("zeppelin pins are " .. (self.db.enabled and "on" or "off") .. ".")
+    elseif cmd == "boats" or cmd == "boats on" or cmd == "boats off" then
+        if cmd == "boats" then
+            self:SetBoatsEnabled(not self.db.boats)
+        else
+            self:SetBoatsEnabled(cmd == "boats on")
+        end
+        QoL:Print("boat pins are " .. (self.db.boats and "on" or "off") .. ".")
+    elseif cmd == "where" then
+        self:PrintWhere()
     elseif cmd == "here" then
         self:MoveNearestDockHere()
     elseif cmd == "reset" then

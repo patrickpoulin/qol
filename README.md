@@ -88,6 +88,23 @@ Puts a pin on the world map and minimap for every zeppelin platform. Hover a pin
 | Skywatcher Plateau (Mulgore 34.3, 25.8) | skyboat | Valanaar, Zephras Isle (Forever only, not checked in game) |
 | Dalaran (Alterac Mountains 12.5, 51.8) | skyboat | Valanaar, Zephras Isle (Forever only, not checked in game) |
 
+**Boats** have gold pins (zeppelins are blue), with their own checkbox on the Misc tab:
+
+| Dock | Goes to |
+| --- | --- |
+| Ratchet (The Barrens 63.4, 38.5) | Booty Bay |
+| Booty Bay (Stranglethorn Vale 26.4, 73.6) | Ratchet |
+| Menethil Harbor, north pier (Wetlands 5.0, 57.1) | Auberdine (in Forever it stops at Southshore first) |
+| Menethil Harbor, south pier (Wetlands 5.3, 63.8) | Theramore |
+| Theramore (Dustwallow Marsh 71.3, 56.3) | Menethil Harbor |
+| Auberdine (Darkshore 33.2, 40.2, approximate) | Rut'theran Village |
+| Auberdine (Darkshore 32.4, 43.8, approximate) | Menethil Harbor |
+| Rut'theran Village (Teldrassil 55.0, 96.5, approximate) | Auberdine |
+| Feathermoon Stronghold (Feralas 31.0, 39.9, approximate) | The Forgotten Coast |
+| The Forgotten Coast (Feralas 43.3, 42.8, approximate) | Feathermoon Stronghold |
+
+Forever's new docks (Stormwind Harbor to Auberdine, Southshore, Steamwheedle Port and Powderfuse Port) have no pins yet because their positions aren't known.
+
 - On zone maps each platform has its own pin. On the continent map a tower has one pin that lists both platforms.
 - Minimap pins show when a dock is within minimap range, and follow a rotating minimap.
 - The Zephras Isle end of the skyboats has no pin yet, because its map position isn't known.
@@ -95,7 +112,9 @@ Puts a pin on the world map and minimap for every zeppelin platform. Hover a pin
 
 | Command | What it does |
 | --- | --- |
-| `/qol zeppelins` / `on` / `off` | Turn the pins on or off |
+| `/qol zeppelins` / `on` / `off` | Turn the zeppelin pins on or off |
+| `/qol zeppelins boats` / `boats on` / `boats off` | Turn the boat pins on or off |
+| `/qol zeppelins where` | Print the map and spot you are standing on |
 | `/qol zeppelins list` | Print every dock and where it goes |
 | `/qol zeppelins here` | Standing on a platform, move that platform's pin to where you are |
 | `/qol zeppelins reset` | Put every moved pin back |

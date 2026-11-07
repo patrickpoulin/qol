@@ -29,6 +29,13 @@ local HELPERS = {
         set = function(on) ns.Zeppelins:SetEnabled(on) end,
     },
     {
+        label = "Show boat docks on the map and minimap",
+        tooltip = "Puts a gold pin on every boat and ferry dock. Hover it to see where that boat goes. "
+            .. "Some dock spots are approximate; stand on the dock and type /qol zeppelins here to fix one.",
+        get = function() return ns.Zeppelins.db.boats end,
+        set = function(on) ns.Zeppelins:SetBoatsEnabled(on) end,
+    },
+    {
         kind = "slider",
         label = "Window background opacity",
         tooltip = "How see-through the QoL window's background is. The text and border stay solid.",
