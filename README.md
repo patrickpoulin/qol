@@ -51,6 +51,24 @@ A built-in **Fishing** tab in the QoL window, next to Campfires.
 | `/qol fish settings on` / `off` | Interact key and fishing sound while the pole is on |
 | `/qol fish debug` | Print what QoL sees (pole, weapons, bags) to help fix swap problems |
 
+### Threat (`/qol threat`)
+
+Shows your threat on the enemy you have targeted, as a small number just above the target frame.
+
+- `Threat 100%` means you pull aggro (or already have it). The colour follows the game's threat colours: grey, yellow when you are close to pulling, orange, then red when the mob is on you.
+- It reads the game's own threat API (`UnitDetailedThreatSituation`). If the client doesn't have it, QoL uses LibThreatClassic2 when another addon (such as Details! or ThreatClassic2) ships it. With neither, nothing is shown.
+- It only shows on enemies you can attack, and only once the game reports threat for you on them.
+
+| Command | What it does |
+| --- | --- |
+| `/qol threat` / `on` / `off` | Turn the threat number on or off |
+| `/qol threat unlock` / `lock` | Drag the number somewhere else (it stays relative to the target frame) |
+| `/qol threat reset` | Put the number back above the target frame |
+| `/qol threat raw on` / `off` | Show % of the tank's threat (you pull at 110% in melee, 130% at range) instead of % to pull |
+| `/qol threat debug` | Print which threat API the game has and what it returns for your target |
+
+To check by hand: `/dump UnitDetailedThreatSituation` prints `function` if the client has it. Then attack a mob, keep it targeted and run `/dump UnitDetailedThreatSituation("player", "target")`. It returns whether you are tanking, the threat status (0 to 3), your % to pull, your raw %, and your threat value.
+
 ## Install
 
 1. With WowUp: Get Addons, Install from URL, `https://github.com/patrickpoulin/qol`. Or by hand: copy the `QoL` folder into `World of Warcraft/_forever_/Interface/AddOns/`.

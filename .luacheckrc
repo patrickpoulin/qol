@@ -24,6 +24,9 @@ read_globals = {
     "GetCVar", "SetCVar", "UnitChannelInfo", "ClearOverrideBindings",
     "SetOverrideBinding", "SetOverrideBindingClick",
     "IsAltKeyDown", "IsControlKeyDown", "IsShiftKeyDown",
+    -- Units and threat
+    "UnitExists", "UnitIsDeadOrGhost", "UnitCanAttack", "UnitName", "UnitAffectingCombat",
+    "strjoin", "tostringall",
     -- Global strings
     "ACCEPT", "CANCEL", "YES", "NO",
 }
