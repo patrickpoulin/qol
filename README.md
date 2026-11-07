@@ -14,7 +14,7 @@ An on-screen to-do list.
 - Use as many tabs as you like. Click `+` to add one, double-click a tab to rename it, and right-click a tab to rename or delete it.
 - Click a task to edit it, tick it when it's done, or click `x` to delete it.
 - `/qol todo clear` deletes every ticked task on the current tab.
-- A built-in **Professions** tab summarises WoW Forever professions and campfire objects. It can't be renamed, deleted or given tasks.
+- A built-in **Campfires** tab lists WoW Forever camp objects and how campfires work. It can't be renamed, deleted or given tasks.
 - Lists are shared by all your characters. Each character remembers its own window position.
 
 | Command | What it does |
