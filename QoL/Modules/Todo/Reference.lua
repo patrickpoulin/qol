@@ -31,7 +31,7 @@ local PROFESSIONS = table.concat({
 }, "\n")
 
 T.referenceTabs = {
-    { id = "ref:professions", name = "Professions", text = PROFESSIONS, reference = true, tasks = {} },
+    { id = "ref:professions", name = "Campfires", text = PROFESSIONS, reference = true, tasks = {} },
 }
 
 function T:GetReferenceTab(id)
