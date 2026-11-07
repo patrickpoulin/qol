@@ -137,38 +137,20 @@ local function worldPos(dock, mapID)
     return dock.world or nil
 end
 
--- Which continent a map is on (0 Eastern Kingdoms, 1 Kalimdor), or nil
--- for maps that span several, such as the world map.
-local continentCache = {}
-local function mapContinent(uiMapID)
-    local c = continentCache[uiMapID]
-    if c == nil then
-        c = false
-        local info = C_Map.GetMapInfo(uiMapID)
-        local v = vector(0.5, 0.5)
-        if v and not (info and info.mapType and info.mapType <= 1) then
-            local ok, continent = pcall(C_Map.GetWorldPosFromMapPos, uiMapID, v)
-            if ok and continent then c = continent end
-        end
-        continentCache[uiMapID] = c
-    end
-    return c or nil
-end
-
 -- Where a dock sits on the map `uiMapID`, as 0-1 fractions, or nil if not on it.
+-- A zone map only shows its own docks. A continent or world map places each
+-- dock through the rectangle its zone covers on that map; a map that doesn't
+-- contain the zone has no rectangle, so nothing leaks onto the wrong map.
 local function positionOnMap(tower, dock, uiMapID)
     local home = resolveMap(tower.map)
     if not home then return end
     if uiMapID == home then return dock.x / 100, dock.y / 100 end
-    local w = worldPos(dock, home)
-    if not (w and C_Map.GetMapPosFromWorldPos) then return end
-    -- Only project onto maps of the dock's own continent (or the world map).
-    local continent = mapContinent(uiMapID)
-    if continent and continent ~= w.continent then return end
-    local ok, pos = pcall(C_Map.GetMapPosFromWorldPos, w.continent, w.pos, uiMapID)
-    if not ok or not pos then return end
-    local x, y = pos:GetXY()
-    if not x or x < 0 or x > 1 or y < 0 or y > 1 then return end
+    if not C_Map.GetMapRectOnMap then return end
+    local ok, left, right, top, bottom = pcall(C_Map.GetMapRectOnMap, home, uiMapID)
+    if not ok or not left or not right or right <= left or not top or not bottom or bottom <= top then return end
+    local x = left + (right - left) * dock.x / 100
+    local y = top + (bottom - top) * dock.y / 100
+    if x <= 0 or x >= 1 or y <= 0 or y >= 1 then return end
     return x, y
 end
 
@@ -263,7 +245,10 @@ function Z:RefreshWorldMap()
                 for _, dock in ipairs(tower.docks) do groups[#groups + 1] = { dock = dock, at = dock } end
             end
             for _, g in ipairs(groups) do
-                local x, y = positionOnMap(tower, g.at, mapID)
+                local x, y
+                if overview or resolveMap(tower.map) == mapID then
+                    x, y = positionOnMap(tower, g.at, mapID)
+                end
                 if x then
                     used = used + 1
                     local pin = self:AcquireWorldPin(used)
