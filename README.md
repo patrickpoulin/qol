@@ -88,6 +88,8 @@ Puts a pin on the world map and minimap for every zeppelin platform. Hover a pin
 | Skywatcher Plateau (Mulgore 34.3, 25.8) | skyboat | Valanaar, Zephras Isle (Forever only, not checked in game) |
 | Dalaran (Alterac Mountains 12.5, 51.8) | skyboat | Valanaar, Zephras Isle (Forever only, not checked in game) |
 
+Docks only one faction can use (Horde zeppelins and skyboat, Alliance boats and ferry) are hidden on characters of the other faction. Ratchet to Booty Bay and the Dalaran skyboat show for everyone.
+
 **Boats** have gold pins (zeppelins are blue), with their own checkbox on the Misc tab:
 
 | Dock | Goes to |

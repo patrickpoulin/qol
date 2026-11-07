@@ -62,7 +62,7 @@ local MAPS = {
 -- One entry per tower; each platform at it has its own zeppelin.
 Z.towers = {
     {
-        name = "Orgrimmar zeppelin tower", map = "durotar",
+        name = "Orgrimmar zeppelin tower", faction = "Horde", map = "durotar",
         where = "Durotar, just outside Orgrimmar",
         docks = {
             { x = 50.82, y = 13.54, to = "Undercity", toWhere = "Tirisfal Glades", master = "Frezza" },
@@ -70,7 +70,7 @@ Z.towers = {
         },
     },
     {
-        name = "Undercity zeppelin tower", map = "tirisfal",
+        name = "Undercity zeppelin tower", faction = "Horde", map = "tirisfal",
         where = "Tirisfal Glades, north of the Undercity gates",
         docks = {
             { x = 60.74, y = 58.87, to = "Orgrimmar", toWhere = "Durotar", master = "Zapetta" },
@@ -78,7 +78,7 @@ Z.towers = {
         },
     },
     {
-        name = "Grom'gol zeppelin tower", map = "stranglethorn",
+        name = "Grom'gol zeppelin tower", faction = "Horde", map = "stranglethorn",
         where = "Grom'gol Base Camp, Stranglethorn Vale",
         docks = {
             { x = 31.43, y = 29.91, to = "Orgrimmar", toWhere = "Durotar", master = "Nez'raz" },
@@ -86,7 +86,7 @@ Z.towers = {
         },
     },
     {
-        name = "Skywatcher Plateau skyboat", map = "mulgore", unconfirmed = true,
+        name = "Skywatcher Plateau skyboat", faction = "Horde", map = "mulgore", unconfirmed = true,
         where = "Mulgore, northwest of Thunder Bluff",
         docks = {
             { x = 34.3, y = 25.8, to = "Valanaar", toWhere = "Zephras Isle", kind = "Skyboat" },
@@ -117,7 +117,7 @@ Z.towers = {
         },
     },
     {
-        name = "Menethil Harbor docks", map = "wetlands", boat = true,
+        name = "Menethil Harbor docks", faction = "Alliance", map = "wetlands", boat = true,
         where = "Menethil Harbor, Wetlands",
         docks = {
             { x = 5.0, y = 57.06, to = "Auberdine", toWhere = "Darkshore", kind = "Boat",
@@ -126,14 +126,14 @@ Z.towers = {
         },
     },
     {
-        name = "Theramore dock", map = "dustwallow", boat = true,
+        name = "Theramore dock", faction = "Alliance", map = "dustwallow", boat = true,
         where = "Theramore Isle, Dustwallow Marsh",
         docks = {
             { x = 71.28, y = 56.29, to = "Menethil Harbor", toWhere = "Wetlands", kind = "Boat" },
         },
     },
     {
-        name = "Auberdine docks", map = "darkshore", boat = true, approx = true,
+        name = "Auberdine docks", faction = "Alliance", map = "darkshore", boat = true, approx = true,
         where = "Auberdine, Darkshore",
         docks = {
             { x = 33.2, y = 40.2, to = "Rut'theran Village", toWhere = "Teldrassil", kind = "Boat" },
@@ -141,21 +141,21 @@ Z.towers = {
         },
     },
     {
-        name = "Rut'theran Village dock", map = "teldrassil", boat = true, approx = true,
+        name = "Rut'theran Village dock", faction = "Alliance", map = "teldrassil", boat = true, approx = true,
         where = "Rut'theran Village, Teldrassil",
         docks = {
             { x = 55.0, y = 96.5, to = "Auberdine", toWhere = "Darkshore", kind = "Boat" },
         },
     },
     {
-        name = "Feathermoon ferry", map = "feralas", boat = true, approx = true,
+        name = "Feathermoon ferry", faction = "Alliance", map = "feralas", boat = true, approx = true,
         where = "Feathermoon Stronghold, Feralas",
         docks = {
             { x = 31.0, y = 39.9, to = "the Forgotten Coast", toWhere = "Feralas", kind = "Ferry" },
         },
     },
     {
-        name = "Forgotten Coast ferry", map = "feralas", boat = true, approx = true,
+        name = "Forgotten Coast ferry", faction = "Alliance", map = "feralas", boat = true, approx = true,
         where = "The Forgotten Coast, Feralas",
         docks = {
             { x = 43.3, y = 42.8, to = "Feathermoon Stronghold", toWhere = "Feralas", kind = "Ferry" },
@@ -163,7 +163,14 @@ Z.towers = {
     },
 }
 
+-- Docks only one faction can use are hidden from the other faction.
+local function playerFaction()
+    return _G.UnitFactionGroup and _G.UnitFactionGroup("player")
+end
+
 function Z:IsTowerShown(tower)
+    local faction = playerFaction()
+    if tower.faction and faction and tower.faction ~= faction then return false end
     if tower.boat then return self.db.boats end
     return self.db.enabled
 end
@@ -588,6 +595,7 @@ end
 function Z:PrintDebug()
     local p = function(...) print("  " .. string.format(...)) end
     QoL:Print("zeppelins debug")
+    p("faction: %s, boats: %s", tostring(playerFaction()), tostring(self.db.boats))
     p("enabled: %s, C_Map: %s, UnitPosition: %s, WorldMapFrame: %s",
         tostring(self.db.enabled), tostring(C_Map ~= nil), tostring(_G.UnitPosition ~= nil),
         tostring(_G.WorldMapFrame ~= nil))
@@ -603,8 +611,8 @@ function Z:PrintDebug()
     p("you: continent %s, world %s, %s", tostring(instance), tostring(px), tostring(py))
     for _, tower in ipairs(self.towers) do
         local w = worldPos(tower.docks[1], resolveMap(tower.map))
-        p("%s: continent %s, world %s, %s", tower.name, tostring(w and w.continent),
-            tostring(w and w.x), tostring(w and w.y))
+        p("%s: map %s, shown %s, continent %s, world %s, %s", tower.name, tostring(resolveMap(tower.map)),
+            tostring(self:IsTowerShown(tower)), tostring(w and w.continent), tostring(w and w.x), tostring(w and w.y))
     end
     p("world map pins shown: %d", self.worldPinCount or 0)
 end
