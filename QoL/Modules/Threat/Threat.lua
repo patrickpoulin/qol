@@ -32,7 +32,7 @@ local T = QoL:RegisterModule("threat", {
         enabled = true, -- on the target frame
         nameplate = true, -- above the target's nameplate
         raw = false, -- false: % of what it takes to pull aggro; true: % of the tank's threat
-        point = nil, -- { x, y } offset from the target frame's centre, once you move it
+        rightPoint = nil, -- { x, y } of the box's right edge from the target frame's centre, once you move it
     },
     slashHelp = {
         "/qol threat - turn the threat % on the target frame on or off",
@@ -97,13 +97,17 @@ end
 function T:ApplyPosition()
     local f, anchor = self.frame, anchorFrame()
     f:ClearAllPoints()
-    if self.db.point then
-        f:SetPoint("CENTER", anchor, "CENTER", self.db.point[1], self.db.point[2])
+    -- The box's right edge is the fixed point, so it grows to the left.
+    local bar = _G.TargetFrameHealthBar or (anchor ~= UIParent and anchor.healthbar)
+    if self.db.rightPoint then
+        f:SetPoint("RIGHT", anchor, "CENTER", self.db.rightPoint[1], self.db.rightPoint[2])
     elseif anchor == UIParent then
-        f:SetPoint("TOP", UIParent, "TOP", 0, -120)
+        f:SetPoint("TOPRIGHT", UIParent, "TOP", 32, -120)
+    elseif bar then
+        -- Right edge of the health bar, just above the target's name.
+        f:SetPoint("BOTTOMRIGHT", bar, "TOPRIGHT", 0, 22)
     else
-        -- Just above the target's name, like the newer clients' numeric threat.
-        f:SetPoint("BOTTOM", anchor, "TOP", -24, -22)
+        f:SetPoint("BOTTOMRIGHT", anchor, "TOP", 8, -22)
     end
 end
 
@@ -120,7 +124,8 @@ function T:CreateFrame()
     f.bg = bg
 
     local text = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    text:SetPoint("CENTER")
+    text:SetPoint("RIGHT", f, "RIGHT", -3, 0)
+    text:SetJustifyH("RIGHT")
     f.text = text
 
     f:SetMovable(true)
@@ -132,10 +137,10 @@ function T:CreateFrame()
     f:SetScript("OnDragStop", function(frame)
         frame:StopMovingOrSizing()
         local a = anchorFrame()
-        local fx, fy = frame:GetCenter()
+        local fx, fy = frame:GetRight(), select(2, frame:GetCenter())
         local ax, ay = a:GetCenter()
         -- Both centres are in this frame's scale when it is parented to the anchor.
-        T.db.point = { math.floor(fx - ax + 0.5), math.floor(fy - ay + 0.5) }
+        T.db.rightPoint = { math.floor(fx - ax + 0.5), math.floor(fy - ay + 0.5) }
         T:ApplyPosition()
     end)
 
@@ -223,10 +228,12 @@ function T:Update()
     if self.unlocked then
         f.text:SetText(faceIcon(3, 1, 0, 0) .. " 100%")
         f.text:SetTextColor(1, 1, 1)
+        f:SetWidth(math.max(24, (f.text:GetStringWidth() or 0) + 6))
         f:Show()
     elseif self.db.enabled and text then
         f.text:SetText(text)
         f.text:SetTextColor(r, g, b)
+        f:SetWidth(math.max(24, (f.text:GetStringWidth() or 0) + 6))
         f:Show()
     else
         f:Hide()
@@ -315,7 +322,7 @@ function T:PrintDebug()
         if self.events and self.events[event] == false then p("event %s: not available", event) end
     end
     p("TargetFrame: %s, enabled: %s, raw: %s, moved: %s", tostring(_G.TargetFrame ~= nil),
-        tostring(self.db.enabled), tostring(self.db.raw), tostring(self.db.point ~= nil))
+        tostring(self.db.enabled), tostring(self.db.raw), tostring(self.db.rightPoint ~= nil))
     p("nameplate: %s, C_NamePlate.GetNamePlateForUnit: %s, target has a nameplate: %s",
         tostring(self.db.nameplate), tostring(_G.C_NamePlate ~= nil and _G.C_NamePlate.GetNamePlateForUnit ~= nil),
         tostring(getTargetPlate() ~= nil))
@@ -350,7 +357,7 @@ function T:OnSlash(args)
     elseif cmd == "lock" then
         self:SetUnlocked(false)
     elseif cmd == "reset" then
-        self.db.point = nil
+        self.db.rightPoint = nil
         self:ApplyPosition()
         QoL:Print("threat number moved back above the target frame.")
     elseif cmd:match("^plate") then
