@@ -7,13 +7,19 @@
 local _, ns = ...
 local QoL = ns.QoL
 
--- A plain face in front of the number, tinted with the threat colour. It
--- opens its mouth once the mob is on you (status 3, red).
-local FACE = "Interface\\AddOns\\QoL\\Media\\ThreatFace"
-local FACE_OPEN = "Interface\\AddOns\\QoL\\Media\\ThreatFaceOpen"
+-- A plain face in front of the number, tinted with the threat colour:
+-- smiling while threat is low, a flat mouth when it's close (yellow, orange),
+-- and an open mouth once the mob is on you (red).
+local MEDIA = "Interface\\AddOns\\QoL\\Media\\"
+local FACES = {
+    [0] = MEDIA .. "ThreatFace",
+    [1] = MEDIA .. "ThreatFaceFlat",
+    [2] = MEDIA .. "ThreatFaceFlat",
+    [3] = MEDIA .. "ThreatFaceOpen",
+}
 
-local function faceIcon(open, r, g, b)
-    return ("|T%s:14:14:0:0:64:64:0:64:0:64:%d:%d:%d|t"):format(open and FACE_OPEN or FACE,
+local function faceIcon(status, r, g, b)
+    return ("|T%s:14:14:0:0:64:64:0:64:0:64:%d:%d:%d|t"):format(FACES[status or 0] or FACES[0],
         math.floor(r * 255 + 0.5), math.floor(g * 255 + 0.5), math.floor(b * 255 + 0.5))
 end
 
@@ -197,7 +203,7 @@ function T:GetDisplay()
     if tanking and not self.db.raw then pct = 100 end
     if not pct then return end
     local r, g, b = statusColor(status)
-    return ("%s %d%%"):format(faceIcon(status == 3, r, g, b), math.floor(pct + 0.5)), r, g, b
+    return ("%s %d%%"):format(faceIcon(status, r, g, b), math.floor(pct + 0.5)), r, g, b
 end
 
 function T:Update()
@@ -209,7 +215,7 @@ function T:Update()
     end
 
     if self.unlocked then
-        f.text:SetText(faceIcon(true, 1, 0, 0) .. " 100%")
+        f.text:SetText(faceIcon(3, 1, 0, 0) .. " 100%")
         f.text:SetTextColor(1, 1, 1)
         f:Show()
     elseif self.db.enabled and text then
