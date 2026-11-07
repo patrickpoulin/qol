@@ -7,8 +7,15 @@
 local _, ns = ...
 local QoL = ns.QoL
 
--- Angry face shown in front of the number (inline texture, edges trimmed).
-local ICON = "|TInterface\\Icons\\Spell_Misc_EmotionAngry:14:14:0:0:64:64:5:59:5:59|t"
+-- A plain face in front of the number, tinted with the threat colour. It
+-- opens its mouth once the mob is on you (status 3, red).
+local FACE = "Interface\\AddOns\\QoL\\Media\\ThreatFace"
+local FACE_OPEN = "Interface\\AddOns\\QoL\\Media\\ThreatFaceOpen"
+
+local function faceIcon(open, r, g, b)
+    return ("|T%s:14:14:0:0:64:64:0:64:0:64:%d:%d:%d|t"):format(open and FACE_OPEN or FACE,
+        math.floor(r * 255 + 0.5), math.floor(g * 255 + 0.5), math.floor(b * 255 + 0.5))
+end
 
 local UPDATE_INTERVAL = 0.2 -- seconds; backup in case threat events don't fire
 
@@ -189,7 +196,8 @@ function T:GetDisplay()
     local pct = self.db.raw and raw or scaled
     if tanking and not self.db.raw then pct = 100 end
     if not pct then return end
-    return ("%s %d%%"):format(ICON, math.floor(pct + 0.5)), statusColor(status)
+    local r, g, b = statusColor(status)
+    return ("%s %d%%"):format(faceIcon(status == 3, r, g, b), math.floor(pct + 0.5)), r, g, b
 end
 
 function T:Update()
@@ -201,7 +209,7 @@ function T:Update()
     end
 
     if self.unlocked then
-        f.text:SetText(ICON .. " 100%")
+        f.text:SetText(faceIcon(true, 1, 0, 0) .. " 100%")
         f.text:SetTextColor(1, 1, 1)
         f:Show()
     elseif self.db.enabled and text then
