@@ -22,6 +22,13 @@ local HELPERS = {
         set = function(on) ns.Threat:SetEnabled(on) end,
     },
     {
+        label = "Show threat % above the target's nameplate",
+        tooltip = "Shows the same threat % just above your target's nameplate. "
+            .. "Nameplates have to be turned on (V by default) for it to show.",
+        get = function() return ns.Threat.db.nameplate end,
+        set = function(on) ns.Threat:SetPlateEnabled(on) end,
+    },
+    {
         label = "Show zeppelin docks on the map and minimap",
         tooltip = "Puts a pin on every zeppelin platform. Hover it to see where that zeppelin goes. "
             .. "Type /qol zeppelins list to print them all in chat.",

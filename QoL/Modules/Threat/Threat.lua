@@ -13,12 +13,14 @@ local T = QoL:RegisterModule("threat", {
     name = "Threat",
     description = "show your threat % on the target frame",
     defaults = {
-        enabled = true,
+        enabled = true, -- on the target frame
+        nameplate = true, -- above the target's nameplate
         raw = false, -- false: % of what it takes to pull aggro; true: % of the tank's threat
         point = nil, -- { x, y } offset from the target frame's centre, once you move it
     },
     slashHelp = {
-        "/qol threat - turn the threat % on or off",
+        "/qol threat - turn the threat % on the target frame on or off",
+        "/qol threat plate on | off - threat % above the target's nameplate",
         "/qol threat unlock | lock - drag the number where you want it",
         "/qol threat reset - put the number back above the target frame",
         "/qol threat raw on | off - show % of the tank's threat instead of % to pull aggro",
@@ -126,30 +128,92 @@ function T:CreateFrame()
     self:ApplyPosition()
 end
 
-function T:Update()
-    local f = self.frame
-    if not f then return end
-    if self.unlocked then
-        f.text:SetText("Threat 100%")
-        f.text:SetTextColor(1, 1, 1)
-        f:Show()
-        return
-    end
-    if not self.db.enabled or not UnitExists("target") or UnitIsDeadOrGhost("target")
-        or not UnitCanAttack("player", "target") then
+local function getTargetPlate()
+    local np = _G.C_NamePlate
+    if not (np and np.GetNamePlateForUnit) then return end
+    local ok, plate = pcall(np.GetNamePlateForUnit, "target")
+    if ok then return plate end
+end
+
+function T:CreatePlateFrame()
+    local f = CreateFrame("Frame", "QoLThreatPlateFrame", UIParent)
+    f:SetSize(64, 16)
+    local bg = f:CreateTexture(nil, "BACKGROUND")
+    bg:SetAllPoints()
+    bg:SetColorTexture(0, 0, 0, 0.5)
+    local text = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    text:SetPoint("CENTER")
+    f.text = text
+    f:Hide()
+    self.plateFrame = f
+end
+
+-- Moves the nameplate number onto the target's current nameplate, if it has one.
+function T:AttachToPlate()
+    local f = self.plateFrame
+    local plate = getTargetPlate()
+    if not plate then
         f:Hide()
+        return false
+    end
+    if f.plate ~= plate then
+        f:SetParent(plate)
+        f:ClearAllPoints()
+        f:SetPoint("BOTTOM", plate, "TOP", 0, 2)
+        f:SetFrameLevel(plate:GetFrameLevel() + 10)
+        f.plate = plate
+    end
+    return true
+end
+
+-- Returns the text and colour to show, or nil when there is nothing to show.
+function T:GetDisplay()
+    if not UnitExists("target") or UnitIsDeadOrGhost("target") or not UnitCanAttack("player", "target") then
         return
     end
     local tanking, status, scaled, raw = self:GetThreat("target")
     local pct = self.db.raw and raw or scaled
     if tanking and not self.db.raw then pct = 100 end
-    if not pct then
-        f:Hide()
-        return
+    if not pct then return end
+    return ("Threat %d%%"):format(math.floor(pct + 0.5)), statusColor(status)
+end
+
+function T:Update()
+    local f, pf = self.frame, self.plateFrame
+    if not f then return end
+    local text, r, g, b
+    if self.db.enabled or self.db.nameplate then
+        text, r, g, b = self:GetDisplay()
     end
-    f.text:SetText(("Threat %d%%"):format(math.floor(pct + 0.5)))
-    f.text:SetTextColor(statusColor(status))
-    f:Show()
+
+    if self.unlocked then
+        f.text:SetText("Threat 100%")
+        f.text:SetTextColor(1, 1, 1)
+        f:Show()
+    elseif self.db.enabled and text then
+        f.text:SetText(text)
+        f.text:SetTextColor(r, g, b)
+        f:Show()
+    else
+        f:Hide()
+    end
+
+    if self.db.nameplate and text and self:AttachToPlate() then
+        pf.text:SetText(text)
+        pf.text:SetTextColor(r, g, b)
+        pf:Show()
+    else
+        pf:Hide()
+    end
+end
+
+function T:SetPlateEnabled(on)
+    self.db.nameplate = on
+    if on and not getTargetPlate() and not (_G.C_NamePlate and _G.C_NamePlate.GetNamePlateForUnit) then
+        QoL:Print("this client can't link nameplates to your target. Type /qol threat debug for details.")
+    end
+    self:Update()
+    if ns.Todo and ns.Todo.RefreshHelpers then ns.Todo:RefreshHelpers() end
 end
 
 function T:SetEnabled(on)
@@ -173,10 +237,12 @@ end
 local EVENTS = {
     "PLAYER_TARGET_CHANGED", "PLAYER_REGEN_DISABLED", "PLAYER_REGEN_ENABLED",
     "UNIT_THREAT_LIST_UPDATE", "UNIT_THREAT_SITUATION_UPDATE",
+    "NAME_PLATE_UNIT_ADDED", "NAME_PLATE_UNIT_REMOVED",
 }
 
 function T:OnEnable()
     self:CreateFrame()
+    self:CreatePlateFrame()
     self.events = {}
     local driver = CreateFrame("Frame")
     for _, event in ipairs(EVENTS) do
@@ -189,7 +255,7 @@ function T:OnEnable()
         elapsed = elapsed + dt
         if elapsed < UPDATE_INTERVAL then return end
         elapsed = 0
-        if T.db.enabled and UnitExists("target") then T:Update() end
+        if (T.db.enabled or T.db.nameplate) and UnitExists("target") then T:Update() end
     end)
 
     -- LibThreatClassic2 only tracks threat while someone listens to it.
@@ -214,6 +280,9 @@ function T:PrintDebug()
     end
     p("TargetFrame: %s, enabled: %s, raw: %s, moved: %s", tostring(_G.TargetFrame ~= nil),
         tostring(self.db.enabled), tostring(self.db.raw), tostring(self.db.point ~= nil))
+    p("nameplate: %s, C_NamePlate.GetNamePlateForUnit: %s, target has a nameplate: %s",
+        tostring(self.db.nameplate), tostring(_G.C_NamePlate ~= nil and _G.C_NamePlate.GetNamePlateForUnit ~= nil),
+        tostring(getTargetPlate() ~= nil))
     if not UnitExists("target") then
         p("no target - target an enemy you are fighting and run this again")
         return
@@ -248,6 +317,9 @@ function T:OnSlash(args)
         self.db.point = nil
         self:ApplyPosition()
         QoL:Print("threat number moved back above the target frame.")
+    elseif cmd:match("^plate") then
+        self:SetPlateEnabled(not cmd:match("off$"))
+        QoL:Print("threat % above the nameplate is " .. (self.db.nameplate and "on" or "off") .. ".")
     elseif cmd:match("^raw") then
         self.db.raw = not cmd:match("off$")
         QoL:Print(self.db.raw and "showing % of the tank's threat." or "showing % to pull aggro (100% = you pull).")

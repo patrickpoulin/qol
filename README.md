@@ -53,7 +53,7 @@ A built-in **Fishing** tab in the QoL window, next to Campfires.
 
 ### Threat (`/qol threat`)
 
-Shows your threat on the enemy you have targeted, as a small number just above the target frame. Turn it on or off with the checkbox on the built-in **Misc** tab of the QoL window, or with `/qol threat`.
+Shows your threat on the enemy you have targeted, as a small number just above the target frame and above the target's nameplate. Each has its own checkbox on the built-in **Misc** tab of the QoL window. The nameplate one needs nameplates turned on (V by default).
 
 ### Misc tab
 
@@ -65,7 +65,8 @@ A built-in tab in the QoL window with on/off switches and settings: the threat %
 
 | Command | What it does |
 | --- | --- |
-| `/qol threat` / `on` / `off` | Turn the threat number on or off |
+| `/qol threat` / `on` / `off` | Turn the threat number on the target frame on or off |
+| `/qol threat plate on` / `off` | Turn the threat number above the target's nameplate on or off |
 | `/qol threat unlock` / `lock` | Drag the number somewhere else (it stays relative to the target frame) |
 | `/qol threat reset` | Put the number back above the target frame |
 | `/qol threat raw on` / `off` | Show % of the tank's threat (you pull at 110% in melee, 130% at range) instead of % to pull |
