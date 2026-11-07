@@ -53,7 +53,7 @@ A built-in **Fishing** tab in the QoL window, next to Campfires.
 
 ### Threat (`/qol threat`)
 
-Shows your threat on the enemy you have targeted, as a small number just above the target frame.
+Shows your threat on the enemy you have targeted, as a small number just above the target frame. Turn it on or off with the checkbox on the built-in **Helpers** tab of the QoL window, or with `/qol threat`.
 
 - `Threat 100%` means you pull aggro (or already have it). The colour follows the game's threat colours: grey, yellow when you are close to pulling, orange, then red when the mob is on you.
 - It reads the game's own threat API (`UnitDetailedThreatSituation`). If the client doesn't have it, QoL uses LibThreatClassic2 when another addon (such as Details! or ThreatClassic2) ships it. With neither, nothing is shown.

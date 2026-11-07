@@ -152,6 +152,15 @@ function T:Update()
     f:Show()
 end
 
+function T:SetEnabled(on)
+    self.db.enabled = on
+    if on and not self:GetSource() then
+        QoL:Print("this client doesn't report threat. Type /qol threat debug for details.")
+    end
+    self:Update()
+    if ns.Todo and ns.Todo.RefreshHelpers then ns.Todo:RefreshHelpers() end
+end
+
 function T:SetUnlocked(unlocked)
     self.unlocked = unlocked
     self.frame:EnableMouse(unlocked)
@@ -226,15 +235,11 @@ function T:OnSlash(args)
     local cmd = (args or ""):lower()
     if cmd == "" or cmd == "on" or cmd == "off" then
         if cmd == "" then
-            self.db.enabled = not self.db.enabled
+            self:SetEnabled(not self.db.enabled)
         else
-            self.db.enabled = cmd == "on"
+            self:SetEnabled(cmd == "on")
         end
         QoL:Print("threat % is " .. (self.db.enabled and "on" or "off") .. ".")
-        if self.db.enabled and not self:GetSource() then
-            QoL:Print("this client doesn't report threat. Type /qol threat debug for details.")
-        end
-        self:Update()
     elseif cmd == "unlock" then
         self:SetUnlocked(true)
     elseif cmd == "lock" then
