@@ -20,10 +20,13 @@ local Z = QoL:RegisterModule("zeppelins", {
     description = "show zeppelin docks and where they go on the map and minimap",
     defaults = {
         enabled = true,
+        moved = {}, -- dock id -> { x, y } set with /qol zeppelins here
     },
     slashHelp = {
         "/qol zeppelins - turn the zeppelin pins on or off",
         "/qol zeppelins list - print every zeppelin dock and where it goes",
+        "/qol zeppelins here - stand on a platform to move its pin to where you are",
+        "/qol zeppelins reset - put every pin back where QoL had it",
         "/qol zeppelins debug - print what QoL sees for the map pins",
     },
 })
@@ -336,7 +339,8 @@ function Z:UpdateMinimap()
         hideMinimapPins()
         return
     end
-    local py, px, _, instance = _G.UnitPosition("player")
+    -- UnitPosition gives world X (north) first, then world Y (west).
+    local px, py, _, instance = _G.UnitPosition("player")
     if not py then
         hideMinimapPins()
         return
@@ -402,6 +406,62 @@ function Z:OnEnable()
     end
 end
 
+---------------------------------------------------------------------------
+-- Moving a pin by hand
+---------------------------------------------------------------------------
+
+local function dockID(tower, dock)
+    return tower.map .. ":" .. (dock.master or dock.to)
+end
+
+-- Put each dock at its built-in spot, or where the player moved it.
+function Z:ApplyMoved()
+    for _, tower in ipairs(self.towers) do
+        for _, dock in ipairs(tower.docks) do
+            dock.homeX = dock.homeX or dock.x
+            dock.homeY = dock.homeY or dock.y
+            local m = self.db.moved[dockID(tower, dock)]
+            dock.x, dock.y = m and m[1] or dock.homeX, m and m[2] or dock.homeY
+            dock.world = nil
+        end
+    end
+    if self.minimapPins then self:UpdateMinimap() end
+    self:RefreshWorldMap()
+end
+
+function Z:OnLoad()
+    self:ApplyMoved()
+end
+
+-- Move the closest dock on the player's current zone map to where they stand.
+function Z:MoveNearestDockHere()
+    local mapID = C_Map.GetBestMapForUnit and C_Map.GetBestMapForUnit("player")
+    local pos = mapID and C_Map.GetPlayerMapPosition and C_Map.GetPlayerMapPosition(mapID, "player")
+    if not pos then
+        QoL:Print("can't read your map position here.")
+        return
+    end
+    local x, y = pos:GetXY()
+    x, y = x * 100, y * 100
+    local best, bestTower, bestDist
+    for _, tower in ipairs(self.towers) do
+        if resolveMap(tower.map) == mapID then
+            for _, dock in ipairs(tower.docks) do
+                local d = (dock.x - x) ^ 2 + (dock.y - y) ^ 2
+                if not bestDist or d < bestDist then best, bestTower, bestDist = dock, tower, d end
+            end
+        end
+    end
+    if not best or bestDist > 25 then -- within 5 map units
+        QoL:Print(("no zeppelin dock near you (you are at %.1f, %.1f on map %s)."):format(x, y, tostring(mapID)))
+        return
+    end
+    self.db.moved[dockID(bestTower, best)] = { math.floor(x * 100 + 0.5) / 100, math.floor(y * 100 + 0.5) / 100 }
+    self:ApplyMoved()
+    QoL:Print(("moved the pin for the %s to %s to %.2f, %.2f. /qol zeppelins reset puts it back."):format(
+        (best.kind or "zeppelin"):lower(), best.to, x, y))
+end
+
 function Z:SetEnabled(on)
     self.db.enabled = on
     self:UpdateMinimap()
@@ -431,10 +491,10 @@ function Z:PrintDebug()
         local id = resolveMap(key)
         p("%s: map %s (%s)", key, tostring(id), tostring(id and mapName(id)))
     end
-    local py, px, instance
+    local px, py, instance
     if _G.UnitPosition then
         local _
-        py, px, _, instance = _G.UnitPosition("player")
+        px, py, _, instance = _G.UnitPosition("player")
     end
     p("you: continent %s, world %s, %s", tostring(instance), tostring(px), tostring(py))
     for _, tower in ipairs(self.towers) do
@@ -454,6 +514,12 @@ function Z:OnSlash(args)
             self:SetEnabled(cmd == "on")
         end
         QoL:Print("zeppelin pins are " .. (self.db.enabled and "on" or "off") .. ".")
+    elseif cmd == "here" then
+        self:MoveNearestDockHere()
+    elseif cmd == "reset" then
+        wipe(self.db.moved)
+        self:ApplyMoved()
+        QoL:Print("zeppelin pins are back where QoL had them.")
     elseif cmd == "list" then
         self:PrintList()
     elseif cmd == "debug" then

@@ -91,11 +91,14 @@ Puts a pin on the world map and minimap for every zeppelin platform. Hover a pin
 - On zone maps each platform has its own pin. On the continent map a tower has one pin that lists both platforms.
 - Minimap pins show when a dock is within minimap range, and follow a rotating minimap.
 - The Zephras Isle end of the skyboats has no pin yet, because its map position isn't known.
+- If a pin is in the wrong spot, stand next to that zeppelin master and type `/qol zeppelins here`. QoL moves the pin there and prints the new spot.
 
 | Command | What it does |
 | --- | --- |
 | `/qol zeppelins` / `on` / `off` | Turn the pins on or off |
 | `/qol zeppelins list` | Print every dock and where it goes |
+| `/qol zeppelins here` | Standing on a platform, move that platform's pin to where you are |
+| `/qol zeppelins reset` | Put every moved pin back |
 | `/qol zeppelins debug` | Print the map IDs and positions QoL is using |
 
 ## Install
