@@ -53,9 +53,9 @@ A built-in **Fishing** tab in the QoL window, next to Campfires.
 
 ### Threat (`/qol threat`)
 
-Shows your threat on the enemy you have targeted, as a small number just above the target frame. Turn it on or off with the checkbox on the built-in **Helpers** tab of the QoL window, or with `/qol threat`.
+Shows your threat on the enemy you have targeted, as a small number just above the target frame. Turn it on or off with the checkbox on the built-in **Misc** tab of the QoL window, or with `/qol threat`.
 
-### Helpers tab
+### Misc tab
 
 A built-in tab in the QoL window with on/off switches and settings: the threat % checkbox, and a slider for how see-through the window's background is (the text and border stay solid).
 

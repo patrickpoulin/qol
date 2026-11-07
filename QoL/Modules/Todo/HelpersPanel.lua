@@ -1,4 +1,4 @@
--- The built-in Helpers tab: on/off switches for small helpers such as threat %.
+-- The built-in Misc tab (id ref:helpers): on/off switches for small helpers such as threat %.
 local _, ns = ...
 local QoL = ns.QoL
 local T = ns.Todo
@@ -8,7 +8,7 @@ local ROW_HEIGHT = 26
 local SLIDER_HEIGHT = 40
 
 table.insert(T.referenceTabs, {
-    id = "ref:helpers", name = "Helpers", reference = true, panel = "helpers", tasks = {},
+    id = "ref:helpers", name = "Misc", reference = true, panel = "helpers", tasks = {},
 })
 
 -- Each helper: label, tooltip, and get/set for its value. A helper with
