@@ -21,6 +21,9 @@ read_globals = {
     -- Items, gear and combat
     "GetInventoryItemID", "GetInventoryItemLink", "GetWeaponEnchantInfo",
     "InCombatLockdown", "C_Timer", "ClearCursor", "PickupInventoryItem", "GetBuildInfo",
+    "GetCVar", "SetCVar", "UnitChannelInfo", "ClearOverrideBindings",
+    "SetOverrideBinding", "SetOverrideBindingClick",
+    "IsAltKeyDown", "IsControlKeyDown", "IsShiftKeyDown",
     -- Global strings
     "ACCEPT", "CANCEL", "YES", "NO",
 }

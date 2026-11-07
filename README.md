@@ -38,12 +38,17 @@ A built-in **Fishing** tab in the QoL window, next to Campfires.
 - One button swaps your weapons for the pole. Press it again to put your main hand and off-hand back.
 - Shows how long the lure on your pole has left.
 - Lists the lures you carry (Shiny Bauble, Nightcrawlers, Aquadynamic Fish Lens, Bright Baubles, Flesh Eating Worm, Aquadynamic Fish Attractor) with how many you have. Click one to put it on your pole.
+- **One-key fishing:** click **Set Key** on the tab (or `/qol fish key F`). With your pole on, press the key to cast and press it again when the bobber splashes to reel in. If your pole has no lure, the key puts your best one on first.
+- While the pole is on, QoL turns on the game's interact key, sets sound effects to full and turns music and ambience off. Your own settings come back when you swap to your weapons.
 - Swapping and lures don't work in combat. The lure buttons come back when the fight ends.
 
 | Command | What it does |
 | --- | --- |
 | `/qol fish` | Swap to your fishing pole, or back to your weapons. Works in a macro too |
 | `/qol fish tab` | Open the Fishing tab |
+| `/qol fish key <key>` / `off` | Set or clear the one-key fishing key |
+| `/qol fish autolure on` / `off` | Let the key put on your best lure first |
+| `/qol fish settings on` / `off` | Interact key and fishing sound while the pole is on |
 | `/qol fish debug` | Print what QoL sees (pole, weapons, bags) to help fix swap problems |
 
 ## Install

@@ -11,13 +11,22 @@ local CHECK_DELAY = 1.5 -- seconds; then check that the swap went through
 local F = QoL:RegisterModule("fish", {
     name = "Fishing",
     description = "swap to your fishing pole and back, apply lures",
+    defaults = {
+        key = nil, -- one-key fishing key, e.g. "F" or "SHIFT-F"
+        autoLure = true,
+        fishingSettings = true, -- interact key and fishing sound while the pole is on
+    },
     charDefaults = {
+        savedCVars = nil, -- your own settings while the fishing ones are on
         mainHand = nil, -- item links of what you held before the swap
         offHand = nil,
     },
     slashHelp = {
         "/qol fish - swap to your fishing pole, or back to your weapons",
         "/qol fish tab - open the Fishing tab",
+        "/qol fish key <key> | off - set the one-key fishing key (cast, then reel in)",
+        "/qol fish autolure on | off - let the key put on your best lure first",
+        "/qol fish settings on | off - interact key and fishing sound while the pole is on",
         "/qol fish debug - print what QoL sees, to help fix swap problems",
     },
 })
@@ -208,6 +217,14 @@ function F:OnSlash(args)
     local cmd = (args or ""):lower()
     if cmd == "" or cmd == "swap" then
         self:Swap()
+    elseif cmd:match("^key") then
+        local key = args:match("^%S+%s+(%S+)")
+        if not key then return QoL:Print("usage: /qol fish key F (or SHIFT-F, or off)") end
+        self:SetKey(key:lower() ~= "off" and key:upper() or nil)
+    elseif cmd:match("^autolure") then
+        self:SetAutoLure(not cmd:match("off$"))
+    elseif cmd:match("^settings") then
+        self:SetFishingSettings(not cmd:match("off$"))
     elseif cmd == "debug" then
         self:PrintDebug()
     elseif cmd == "tab" then

@@ -2,7 +2,7 @@
 ## Title: QoL
 ## Notes: Quality-of-life features. Type /qol for help.
 ## Author: Patrick
-## Version: 0.3.1
+## Version: 0.4.0
 ## SavedVariables: QoLDB
 ## SavedVariablesPerCharacter: QoLCharDB
 
@@ -20,3 +20,4 @@ Modules/Todo/Tabs.lua
 Modules/Todo/TaskList.lua
 
 Modules/Fishing/Fishing.lua
+Modules/Fishing/OneKey.lua

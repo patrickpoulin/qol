@@ -9,7 +9,7 @@ local T = ns.Todo
 
 local SCROLLBAR_SPACE = 24
 local ROW_HEIGHT, ICON_SIZE = 22, 18
-local LURE_TOP = 96 -- y offset of the first lure row
+local LURE_TOP = 124 -- y offset of the first lure row
 
 table.insert(T.referenceTabs, {
     id = "ref:fishing", name = "Fishing", reference = true, panel = true, tasks = {},
@@ -17,6 +17,31 @@ table.insert(T.referenceTabs, {
 
 local stash = CreateFrame("Frame", nil, UIParent)
 stash:Hide()
+
+local MODIFIER_KEYS = {
+    LSHIFT = true, RSHIFT = true, LCTRL = true, RCTRL = true, LALT = true, RALT = true,
+}
+
+-- Wait for the next key press and make it the fishing key. Escape cancels.
+local function captureKey(button, onDone)
+    local catcher = button.catcher
+    if not catcher then
+        catcher = CreateFrame("Frame", nil, button)
+        catcher:EnableKeyboard(true)
+        catcher:SetPropagateKeyboardInput(false)
+        button.catcher = catcher
+    end
+    button:SetText("Press a Key...")
+    catcher:Show()
+    catcher:SetScript("OnKeyDown", function(frame, key)
+        if MODIFIER_KEYS[key] then return end
+        frame:Hide()
+        if key == "ESCAPE" then return onDone(nil, true) end
+        local prefix = (IsAltKeyDown() and "ALT-" or "") .. (IsControlKeyDown() and "CTRL-" or "")
+            .. (IsShiftKeyDown() and "SHIFT-" or "")
+        onDone(prefix .. key)
+    end)
+end
 
 local function formatTime(seconds)
     return ("%d:%02d"):format(math.floor(seconds / 60), math.floor(seconds % 60))
@@ -88,13 +113,44 @@ function T:CreateFishingPanel(parent)
     swap:SetScript("OnLeave", GameTooltip_Hide)
     scroll.swap = swap
 
+    local setKey = CreateFrame("Button", nil, child, "UIPanelButtonTemplate")
+    setKey:SetSize(100, 22)
+    setKey:SetPoint("TOPRIGHT", child, "TOPRIGHT", 0, -46)
+    setKey:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+    setKey:SetScript("OnClick", function(btn, mouse)
+        if mouse == "RightButton" then
+            if btn.catcher then btn.catcher:Hide() end
+            return F:SetKey(nil)
+        end
+        captureKey(btn, function(key, cancelled)
+            if cancelled then return self:RefreshFishing() end
+            F:SetKey(key)
+        end)
+    end)
+    setKey:SetScript("OnEnter", function(btn)
+        GameTooltip:SetOwner(btn, "ANCHOR_TOP")
+        GameTooltip:SetText("Fishing key")
+        GameTooltip:AddLine("With your pole on, press it to cast and again when the bobber splashes. It puts on your best lure first if the pole has none. Right-click to clear it.", 1, 1, 1, true)
+        GameTooltip:Show()
+    end)
+    setKey:SetScript("OnLeave", GameTooltip_Hide)
+    scroll.setKey = setKey
+
+    local keyText = child:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    keyText:SetPoint("LEFT", child, "LEFT", 2, 0)
+    keyText:SetPoint("TOP", setKey, "TOP", 0, -5)
+    keyText:SetPoint("RIGHT", setKey, "LEFT", -4, 0)
+    keyText:SetJustifyH("LEFT")
+    keyText:SetWordWrap(false)
+    scroll.keyText = keyText
+
     local lureStatus = child:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    lureStatus:SetPoint("TOPLEFT", child, "TOPLEFT", 2, -50)
+    lureStatus:SetPoint("TOPLEFT", child, "TOPLEFT", 2, -78)
     lureStatus:SetJustifyH("LEFT")
     scroll.lureStatus = lureStatus
 
     local header = child:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    header:SetPoint("TOPLEFT", child, "TOPLEFT", 2, -74)
+    header:SetPoint("TOPLEFT", child, "TOPLEFT", 2, -102)
     header:SetText("Lures - click one to put it on your pole")
     scroll.header = header
 
@@ -190,6 +246,10 @@ function T:RefreshFishing()
         panel.swap:SetText(reason)
     end
     panel.swap:SetEnabled(state ~= nil)
+
+    local key = F.db.key
+    panel.keyText:SetText(key and ("Fishing key: |cff33ff99" .. key .. "|r") or "Fishing key: |cff999999not set|r")
+    panel.setKey:SetText(key and "Change Key" or "Set Key")
 
     self:UpdateLureStatus()
 
