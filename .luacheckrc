@@ -12,7 +12,7 @@ globals = {
 
 read_globals = {
     -- Lua / WoW helpers
-    "CopyTable", "time",
+    "CopyTable", "time", "wipe",
     -- Frames and UI
     "CreateFrame", "UIParent", "GameTooltip", "GameTooltip_Hide",
     "StaticPopup_Show", "MenuUtil",

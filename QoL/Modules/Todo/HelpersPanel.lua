@@ -22,6 +22,13 @@ local HELPERS = {
         set = function(on) ns.Threat:SetEnabled(on) end,
     },
     {
+        label = "Show zeppelin docks on the map and minimap",
+        tooltip = "Puts a pin on every zeppelin platform. Hover it to see where that zeppelin goes. "
+            .. "Type /qol zeppelins list to print them all in chat.",
+        get = function() return ns.Zeppelins.db.enabled end,
+        set = function(on) ns.Zeppelins:SetEnabled(on) end,
+    },
+    {
         kind = "slider",
         label = "Window background opacity",
         tooltip = "How see-through the QoL window's background is. The text and border stay solid.",

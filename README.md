@@ -57,7 +57,7 @@ Shows your threat on the enemy you have targeted, as a small number just above t
 
 ### Misc tab
 
-A built-in tab in the QoL window with on/off switches and settings: the threat % checkbox, and a slider for how see-through the window's background is (the text and border stay solid).
+A built-in tab in the QoL window with on/off switches and settings: the threat % checkbox, the zeppelin pins checkbox, and a slider for how see-through the window's background is (the text and border stay solid).
 
 - `Threat 100%` means you pull aggro (or already have it). The colour follows the game's threat colours: grey, yellow when you are close to pulling, orange, then red when the mob is on you.
 - It reads the game's own threat API (`UnitDetailedThreatSituation`). If the client doesn't have it, QoL uses LibThreatClassic2 when another addon (such as Details! or ThreatClassic2) ships it. With neither, nothing is shown.
@@ -72,6 +72,31 @@ A built-in tab in the QoL window with on/off switches and settings: the threat %
 | `/qol threat debug` | Print which threat API the game has and what it returns for your target |
 
 To check by hand: `/dump UnitDetailedThreatSituation` prints `function` if the client has it. Then attack a mob, keep it targeted and run `/dump UnitDetailedThreatSituation("player", "target")`. It returns whether you are tanking, the threat status (0 to 3), your % to pull, your raw %, and your threat value.
+
+### Zeppelins (`/qol zeppelins`)
+
+Puts a pin on the world map and minimap for every zeppelin platform. Hover a pin to see where that zeppelin goes and who the zeppelin master is. Turn it on or off with the checkbox on the **Misc** tab, or with `/qol zeppelins`.
+
+| Tower | Platform | Goes to |
+| --- | --- | --- |
+| Orgrimmar (Durotar 50.8, 13.5) | Frezza | Undercity, Tirisfal Glades |
+| Orgrimmar (Durotar 50.7, 12.9) | Snurk Bucksquick | Grom'gol Base Camp, Stranglethorn Vale |
+| Undercity (Tirisfal Glades 60.7, 58.9) | Zapetta | Orgrimmar, Durotar |
+| Undercity (Tirisfal Glades 61.8, 59.2) | Hin Denburg | Grom'gol Base Camp, Stranglethorn Vale |
+| Grom'gol (Stranglethorn Vale 31.4, 29.9) | Nez'raz | Orgrimmar, Durotar |
+| Grom'gol (Stranglethorn Vale 31.5, 29.4) | Squibby Overspeck | Undercity, Tirisfal Glades |
+| Skywatcher Plateau (Mulgore 34.3, 25.8) | skyboat | Valanaar, Zephras Isle (Forever only, not checked in game) |
+| Dalaran (Alterac Mountains 12.5, 51.8) | skyboat | Valanaar, Zephras Isle (Forever only, not checked in game) |
+
+- On zone maps each platform has its own pin. On the continent map a tower has one pin that lists both platforms.
+- Minimap pins show when a dock is within minimap range, and follow a rotating minimap.
+- The Zephras Isle end of the skyboats has no pin yet, because its map position isn't known.
+
+| Command | What it does |
+| --- | --- |
+| `/qol zeppelins` / `on` / `off` | Turn the pins on or off |
+| `/qol zeppelins list` | Print every dock and where it goes |
+| `/qol zeppelins debug` | Print the map IDs and positions QoL is using |
 
 ## Install
 
