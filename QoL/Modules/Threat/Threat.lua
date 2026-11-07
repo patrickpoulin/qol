@@ -158,7 +158,8 @@ function T:CreatePlateFrame()
     bg:SetAllPoints()
     bg:SetColorTexture(0, 0, 0, 0.5)
     local text = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    text:SetPoint("CENTER")
+    text:SetPoint("RIGHT", f, "RIGHT", -3, 0)
+    text:SetJustifyH("RIGHT")
     f.text = text
     f:Hide()
     self.plateFrame = f
@@ -175,17 +176,22 @@ function T:AttachToPlate()
     if f.plate ~= plate then
         f:SetParent(plate)
         f:ClearAllPoints()
-        -- Sit right on the name; the plate frame itself reaches well above it.
+        -- Line up with the right edge of the health bar, at the height of the
+        -- top of the name (the plate frame itself reaches well above it).
         -- Other nameplate addons (e.g. Plater) may not have these fields.
         local uf = plate.UnitFrame
         local name = uf and (uf.name or uf.Name)
         local bar = uf and (uf.healthBar or uf.HealthBar)
-        if name and name.IsShown and name:IsShown() then
-            f:SetPoint("BOTTOM", name, "TOP", 0, 0)
-        elseif bar then
-            f:SetPoint("BOTTOM", bar, "TOP", 0, 14)
+        if bar then
+            local nameHeight = 12
+            if name and name.IsShown and name:IsShown() and name.GetStringHeight then
+                nameHeight = name:GetStringHeight() or nameHeight
+            end
+            f:SetPoint("BOTTOMRIGHT", bar, "TOPRIGHT", 0, nameHeight + 2)
+        elseif name then
+            f:SetPoint("BOTTOMRIGHT", name, "TOPRIGHT", 0, 0)
         else
-            f:SetPoint("CENTER", plate, "CENTER", 0, 20)
+            f:SetPoint("RIGHT", plate, "RIGHT", 0, 20)
         end
         f:SetFrameLevel(plate:GetFrameLevel() + 10)
         f.plate = plate
@@ -229,6 +235,8 @@ function T:Update()
     if self.db.nameplate and text and self:AttachToPlate() then
         pf.text:SetText(text)
         pf.text:SetTextColor(r, g, b)
+        -- Hug the text so the right edge lines up with the nameplate's.
+        pf:SetWidth(math.max(24, (pf.text:GetStringWidth() or 0) + 6))
         pf:Show()
     else
         pf:Hide()
