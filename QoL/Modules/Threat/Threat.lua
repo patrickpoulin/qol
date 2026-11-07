@@ -7,6 +7,9 @@
 local _, ns = ...
 local QoL = ns.QoL
 
+-- Angry face shown in front of the number (inline texture, edges trimmed).
+local ICON = "|TInterface\\Icons\\Spell_Misc_EmotionAngry:14:14:0:0:64:64:5:59:5:59|t"
+
 local UPDATE_INTERVAL = 0.2 -- seconds; backup in case threat events don't fire
 
 local T = QoL:RegisterModule("threat", {
@@ -186,7 +189,7 @@ function T:GetDisplay()
     local pct = self.db.raw and raw or scaled
     if tanking and not self.db.raw then pct = 100 end
     if not pct then return end
-    return ("Threat %d%%"):format(math.floor(pct + 0.5)), statusColor(status)
+    return ("%s %d%%"):format(ICON, math.floor(pct + 0.5)), statusColor(status)
 end
 
 function T:Update()
@@ -198,7 +201,7 @@ function T:Update()
     end
 
     if self.unlocked then
-        f.text:SetText("Threat 100%")
+        f.text:SetText(ICON .. " 100%")
         f.text:SetTextColor(1, 1, 1)
         f:Show()
     elseif self.db.enabled and text then

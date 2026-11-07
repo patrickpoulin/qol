@@ -59,7 +59,7 @@ Shows your threat on the enemy you have targeted, as a small number just above t
 
 A built-in tab in the QoL window with on/off switches and settings: the threat % checkbox, the zeppelin pins checkbox, and a slider for how see-through the window's background is (the text and border stay solid).
 
-- `Threat 100%` means you pull aggro (or already have it). The colour follows the game's threat colours: grey, yellow when you are close to pulling, orange, then red when the mob is on you.
+- An angry face and `100%` means you pull aggro (or already have it). The colour follows the game's threat colours: grey, yellow when you are close to pulling, orange, then red when the mob is on you.
 - It reads the game's own threat API (`UnitDetailedThreatSituation`). If the client doesn't have it, QoL uses LibThreatClassic2 when another addon (such as Details! or ThreatClassic2) ships it. With neither, nothing is shown.
 - It only shows on enemies you can attack, and only once the game reports threat for you on them.
 
