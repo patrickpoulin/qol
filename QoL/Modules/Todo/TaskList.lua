@@ -1,5 +1,6 @@
 -- Task list: scrolling rows, inline edit, add box.
 local _, ns = ...
+local QoL = ns.QoL
 local T = ns.Todo
 
 local ROW_HEIGHT = 22
@@ -109,7 +110,7 @@ function T:CreateTaskList(parent)
     self.addBox = add
 
     -- Scrolling list between the tab strip and the bottom bar.
-    local scroll = CreateFrame("ScrollFrame", nil, parent, "UIPanelScrollFrameTemplate")
+    local scroll = QoL.CreateScrollFrame(parent)
     scroll:SetPoint("TOPLEFT", self.tabStrip, "BOTTOMLEFT", 0, -6)
     scroll:SetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT", -SCROLLBAR_SPACE, 28)
     local child = CreateFrame("Frame", nil, scroll)

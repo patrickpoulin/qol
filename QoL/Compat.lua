@@ -28,6 +28,22 @@ function QoL.ShowContextMenu(owner, items)
     ToggleDropDownMenu(1, nil, QoL.dropdown, "cursor", 0, 0)
 end
 
+-- A vertical scroll frame with a scroll bar where the client has the
+-- template, and plain mouse-wheel scrolling where it doesn't.
+function QoL.CreateScrollFrame(parent)
+    local ok, scroll = pcall(CreateFrame, "ScrollFrame", nil, parent, "UIPanelScrollFrameTemplate")
+    if ok and scroll then return scroll end
+
+    scroll = CreateFrame("ScrollFrame", nil, parent)
+    scroll:EnableMouseWheel(true)
+    scroll:SetScript("OnMouseWheel", function(self, delta)
+        local max = self:GetVerticalScrollRange()
+        local value = math.min(max, math.max(0, self:GetVerticalScroll() - delta * 20))
+        self:SetVerticalScroll(value)
+    end)
+    return scroll
+end
+
 -- StaticPopup edit box, across client versions.
 function QoL.GetPopupEditBox(popup)
     if popup.GetEditBox then return popup:GetEditBox() end
