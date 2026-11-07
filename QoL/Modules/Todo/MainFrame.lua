@@ -101,6 +101,12 @@ function T:SetLocked(locked)
     self.frame.grip:SetShown(not locked and not self.charDB.collapsed)
 end
 
+function T:SetBackgroundAlpha(alpha)
+    alpha = math.max(0, math.min(1, alpha))
+    self.db.bgAlpha = alpha
+    if self.frame then self.frame:SetBackdropColor(0.05, 0.05, 0.08, alpha) end
+end
+
 function T:UpdateTitle()
     self.frame.title:SetText("QoL")
 end
@@ -115,7 +121,7 @@ function T:CreateMainFrame()
     f:SetResizable(true)
     f:SetResizeBounds(MIN_W, MIN_H, MAX_W, MAX_H)
     f:SetBackdrop(BACKDROP)
-    f:SetBackdropColor(0.05, 0.05, 0.08, 0.85)
+    f:SetBackdropColor(0.05, 0.05, 0.08, self.db.bgAlpha or 0.85)
     f:SetBackdropBorderColor(0.5, 0.5, 0.55, 1)
 
     -- Title bar: drag to move, double-click to collapse.
