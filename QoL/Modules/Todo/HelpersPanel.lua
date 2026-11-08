@@ -6,6 +6,8 @@ local T = ns.Todo
 local SCROLLBAR_SPACE = 24
 local ROW_HEIGHT = 26
 local SLIDER_HEIGHT = 40
+local HEADER_HEIGHT = 26
+local INDENT = 22
 
 table.insert(T.referenceTabs, {
     id = "ref:helpers", name = "Misc", reference = true, panel = "helpers", tasks = {},
@@ -13,7 +15,10 @@ table.insert(T.referenceTabs, {
 
 -- Each helper: label, tooltip, and get/set for its value. A helper with
 -- kind = "slider" holds a number from min to max; the rest are checkboxes.
+local function petOn() return ns.PetHealth.db.enabled end
+
 local HELPERS = {
+    { kind = "header", label = "Threat" },
     {
         label = "Show threat % on the target frame",
         tooltip = "Shows how close you are to pulling aggro from the enemy you have targeted. "
@@ -28,6 +33,8 @@ local HELPERS = {
         get = function() return ns.Threat.db.nameplate end,
         set = function(on) ns.Threat:SetPlateEnabled(on) end,
     },
+
+    { kind = "header", label = "Pet health" },
     {
         label = "Warn when your pet's health is low",
         tooltip = "Turns the whole low pet health warning on or off. "
@@ -36,34 +43,39 @@ local HELPERS = {
         set = function(on) ns.PetHealth:SetOption("enabled", on) end,
     },
     {
-        label = "Pet: glow around the pet portrait",
+        indent = true, enabledIf = petOn,
+        label = "Glow on the pet portrait and health bar",
         tooltip = "A slow orange glow at the warning level, then a fast red pulse at the danger level.",
         get = function() return ns.PetHealth.db.glow end,
         set = function(on) ns.PetHealth:SetOption("glow", on) end,
     },
     {
-        label = "Pet: play a sound at the danger level",
-        tooltip = "Plays the raid warning sound once when your pet drops to the danger level.",
-        get = function() return ns.PetHealth.db.sound end,
-        set = function(on) ns.PetHealth:SetOption("sound", on) end,
-    },
-    {
-        label = "Pet: big text at the danger level",
-        tooltip = "Shows PET and its health % above your character for a few seconds. "
+        indent = true, enabledIf = petOn,
+        label = "Big text at the danger level",
+        tooltip = "Shows PET and its health above your character. "
             .. "Hunters also see Mend Pet when it's ready to cast.",
         get = function() return ns.PetHealth.db.text end,
         set = function(on) ns.PetHealth:SetOption("text", on) end,
     },
     {
-        label = "Pet: red glow at the screen edges at the danger level",
+        indent = true, enabledIf = petOn,
+        label = "Red screen edges at the danger level",
         tooltip = "Pulses the edges of the screen red while your pet is at the danger level. "
-            .. "Off by default because it looks a lot like your own low health warning.",
+            .. "It looks a lot like your own low health warning.",
         get = function() return ns.PetHealth.db.screen end,
         set = function(on) ns.PetHealth:SetOption("screen", on) end,
     },
     {
-        kind = "slider",
-        label = "Pet warning level",
+        indent = true, enabledIf = petOn,
+        label = "Sound at the danger level",
+        tooltip = "Plays the raid warning sound once when your pet drops to the danger level. "
+            .. "Clients that hide unit health from addons can't play it.",
+        get = function() return ns.PetHealth.db.sound end,
+        set = function(on) ns.PetHealth:SetOption("sound", on) end,
+    },
+    {
+        kind = "slider", indent = true, enabledIf = petOn,
+        label = "Warning level",
         tooltip = "The orange glow starts when your pet's health drops to this %.",
         min = 10, max = 95, step = 5,
         format = function(v) return ("%d%%"):format(v) end,
@@ -71,14 +83,16 @@ local HELPERS = {
         set = function(v) ns.PetHealth:SetWarn(v) end,
     },
     {
-        kind = "slider",
-        label = "Pet danger level",
-        tooltip = "The red pulse, sound and text start when your pet's health drops to this %.",
+        kind = "slider", indent = true, enabledIf = petOn,
+        label = "Danger level",
+        tooltip = "The red pulse, text and sound start when your pet's health drops to this %.",
         min = 5, max = 90, step = 5,
         format = function(v) return ("%d%%"):format(v) end,
         get = function() return ns.PetHealth.db.danger end,
         set = function(v) ns.PetHealth:SetDanger(v) end,
     },
+
+    { kind = "header", label = "Map" },
     {
         label = "Show zeppelin docks on the map and minimap",
         tooltip = "Puts a pin on every zeppelin platform. Hover it to see where that zeppelin goes. "
@@ -93,9 +107,11 @@ local HELPERS = {
         get = function() return ns.Zeppelins.db.boats end,
         set = function(on) ns.Zeppelins:SetBoatsEnabled(on) end,
     },
+
+    { kind = "header", label = "Window" },
     {
         kind = "slider",
-        label = "Window background opacity",
+        label = "Background opacity",
         tooltip = "How see-through the QoL window's background is. The text and border stay solid.",
         min = 0, max = 1, step = 0.05,
         format = function(v) return ("%d%%"):format(math.floor(v * 100 + 0.5)) end,
@@ -112,6 +128,32 @@ local function setTooltip(frame, helper)
         GameTooltip:Show()
     end)
     frame:SetScript("OnLeave", GameTooltip_Hide)
+end
+
+-- A gold section title with a faint line under it.
+local function createHeader(parent, helper)
+    local row = CreateFrame("Frame", nil, parent)
+    row:SetHeight(HEADER_HEIGHT)
+    local label = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    label:SetPoint("BOTTOMLEFT", row, "BOTTOMLEFT", 2, 5)
+    label:SetText(helper.label)
+    local line = row:CreateTexture(nil, "ARTWORK")
+    line:SetColorTexture(1, 0.82, 0, 0.25)
+    line:SetHeight(1)
+    line:SetPoint("BOTTOMLEFT", row, "BOTTOMLEFT", 2, 2)
+    line:SetPoint("BOTTOMRIGHT", row, "BOTTOMRIGHT", -4, 2)
+    row.helper = helper
+    row.Refresh = function() end
+    return row
+end
+
+-- Dims a setting whose parent switch is off.
+local function refreshEnabled(item, check)
+    local helper = item.helper
+    if not helper.enabledIf then return end
+    local on = helper.enabledIf() and true or false
+    item:SetAlpha(on and 1 or 0.45)
+    if check and check.SetEnabled then check:SetEnabled(on) end
 end
 
 -- A plain horizontal slider: built by hand so it doesn't depend on
@@ -160,6 +202,7 @@ local function createSlider(parent, helper)
         slider:SetValue(helper.get())
         value:SetText(helper.format(helper.get()))
         slider.refreshing = false
+        refreshEnabled(row)
     end
     return row
 end
@@ -174,7 +217,10 @@ local function createCheck(parent, helper)
     check:SetScript("OnClick", function(btn) helper.set(btn:GetChecked() and true or false) end)
     setTooltip(check, helper)
     check.helper = helper
-    check.Refresh = function() check:SetChecked(helper.get()) end
+    check.Refresh = function()
+        check:SetChecked(helper.get())
+        refreshEnabled(check, check)
+    end
     return check
 end
 
@@ -191,14 +237,22 @@ function T:CreateHelpersPanel(parent)
     local y = 0
     for i, helper in ipairs(HELPERS) do
         local item
-        if helper.kind == "slider" then
+        local x = helper.indent and INDENT or 0
+        if helper.kind == "header" then
+            item = createHeader(child, helper)
+            item:SetPoint("RIGHT", child, "RIGHT", 0, 0)
+            -- A little extra space above every heading but the first.
+            if i > 1 then y = y + 6 end
+            item:SetPoint("TOPLEFT", child, "TOPLEFT", 0, -y)
+            y = y + HEADER_HEIGHT
+        elseif helper.kind == "slider" then
             item = createSlider(child, helper)
             item:SetPoint("RIGHT", child, "RIGHT", 0, 0)
-            item:SetPoint("TOPLEFT", child, "TOPLEFT", 0, -y - 4)
-            y = y + SLIDER_HEIGHT + 4
+            item:SetPoint("TOPLEFT", child, "TOPLEFT", x, -y - 2)
+            y = y + SLIDER_HEIGHT + 2
         else
             item = createCheck(child, helper)
-            item:SetPoint("TOPLEFT", child, "TOPLEFT", 0, -y)
+            item:SetPoint("TOPLEFT", child, "TOPLEFT", x, -y)
             y = y + ROW_HEIGHT
         end
         scroll.checks[i] = item
@@ -230,6 +284,8 @@ function T:LayoutHelpers()
     child:SetWidth(width)
     child:SetHeight(panel.contentHeight + 4)
     for _, item in ipairs(panel.checks) do
-        if item.helper.kind ~= "slider" then item.label:SetWidth(width - 30) end
+        if not item.helper.kind then
+            item.label:SetWidth(width - 30 - (item.helper.indent and INDENT or 0))
+        end
     end
 end
