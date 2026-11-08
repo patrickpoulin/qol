@@ -14,7 +14,7 @@ read_globals = {
     -- Lua / WoW helpers
     "CopyTable", "time", "wipe", "UnitLevel", "C_Map", "Enum",
     -- Frames and UI
-    "CreateFrame", "UIParent", "GameTooltip", "GameTooltip_Hide",
+    "CreateFrame", "hooksecurefunc", "UIParent", "GameTooltip", "GameTooltip_Hide",
     "StaticPopup_Show", "MenuUtil", "WorldMapFrame", "ToggleWorldMap",
     "UIDropDownMenu_Initialize", "UIDropDownMenu_CreateInfo",
     "UIDropDownMenu_AddButton", "ToggleDropDownMenu",
