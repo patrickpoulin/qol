@@ -10,18 +10,18 @@ local function h(text) return "|cffffd100" .. text .. "|r" end
 local function p(name) return "|cff88ccff" .. name .. "|r" end
 
 local PROFESSIONS = table.concat({
-    h("Camp objects"),
-    p("First Aid") .. " - First Aid Kit: Stamina",
-    p("Fishing") .. " - Fishing Bowl: +8% all stats",
+    h("Camp Objects"),
     p("Alchemy") .. " - Mana Well: mana every 5 sec",
     p("Blacksmithing") .. " - Sharpening Wheel: Strength",
     p("Enchanting") .. " - Enchanted Lute: armor, stats, resistances",
+    p("Engineering") .. " - Reagent Bot: reagent vendor",
+    p("First Aid") .. " - First Aid Kit: Stamina",
+    p("Fishing") .. " - Fishing Bowl: +8% all stats",
     p("Herbalism") .. " - Incense Candle: Intellect",
     p("Leatherworking") .. " - Camp Tent: rested XP (5% of a level)",
+    p("Mining") .. " - Lodestone: Melee AP",
     p("Skinning") .. " - Camp Chair: +2% crit",
     p("Tailoring") .. " - Faction Banner: Spirit",
-    p("Engineering") .. " - Reagent Bot: reagent vendor",
-    p("Mining") .. " - Lodestone: Melee AP",
     "",
     h("Campfires"),
     "Cooking 1 unlocks a Basic Campfire.",
