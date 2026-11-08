@@ -7,10 +7,16 @@
 -- An optional red glow at the screen edges joins in at danger; it's off by default.
 -- Each level only clears once health is a few % above its line, so the alert
 -- doesn't flicker while health hovers right around it.
+--
+-- Newer clients hide unit health from addons as a "secret value": it can be
+-- shown but not compared or used in maths. There the addon can't know the %,
+-- so it hands the game two step curves (below danger, between danger and
+-- warning) and the game turns pet health into the glows' and text's alpha.
+-- That mode has no sound and no hysteresis, since both need the real number.
 local _, ns = ...
 local QoL = ns.QoL
 
-local NONE, WARN, DANGER = 0, 1, 2
+local NONE, WARN, DANGER, SECRET = 0, 1, 2, 3
 local MARGIN = 5 -- % above a line before its alert clears
 local SOUND_COOLDOWN = 5 -- seconds between danger sounds
 local TEXT_TIME = 4 -- seconds the big text stays up
@@ -21,7 +27,7 @@ local COLORS = {
     [WARN] = { 1, 0.55, 0 },
     [DANGER] = { 1, 0.1, 0.1 },
 }
-local PULSE_SPEED = { [WARN] = 2.5, [DANGER] = 9 } -- radians per second
+local PULSE_SPEED = { [WARN] = 2.5, [DANGER] = 9, [SECRET] = 5 } -- radians per second
 
 local P = QoL:RegisterModule("pet", {
     name = "Pet Health",
@@ -49,20 +55,73 @@ local function refreshHelpers()
     if ns.Todo and ns.Todo.RefreshHelpers then ns.Todo:RefreshHelpers() end
 end
 
--- Pet health as a whole %, or nil when there is no living pet to warn about.
+local function isSecret(v)
+    return _G.issecretvalue ~= nil and _G.issecretvalue(v) == true
+end
+
+-- Runs fn and returns its result, or nil if it errors (e.g. on a secret value).
+local function try(fn, ...)
+    local ok, v = pcall(fn, ...)
+    if ok then return v end
+end
+
+-- Pet health as a whole %, "secret" when the client won't let addons read
+-- it, or nil when there is no living pet to warn about.
 function P:GetPetPct()
     if self.testPct then return self.testPct end
-    if not UnitExists("pet") or _G.UnitIsDead("pet") then return end
-    if _G.UnitOnTaxi and _G.UnitOnTaxi("player") then return end
-    local max = _G.UnitHealthMax("pet")
-    if not max or max <= 0 then return end
-    return math.floor(_G.UnitHealth("pet") / max * 100 + 0.5)
+    if not UnitExists("pet") then return end
+    if try(function() return _G.UnitIsDead("pet") and true or false end) then return end
+    if try(function() return _G.UnitOnTaxi and _G.UnitOnTaxi("player") and true or false end) then return end
+    local hp, max = _G.UnitHealth("pet"), _G.UnitHealthMax("pet")
+    if not isSecret(hp) and not isSecret(max) then
+        local pct = try(function()
+            if max and max > 0 then return math.floor(hp / max * 100 + 0.5) end
+        end)
+        if pct then return pct end
+    end
+    if _G.UnitHealthPercent then
+        local v = try(_G.UnitHealthPercent, "pet")
+        if type(v) == "number" and not isSecret(v) then
+            -- 0 to 1 on most clients; allow for 0 to 100 too.
+            return math.floor((v > 1 and v or v * 100) + 0.5)
+        end
+    end
+    return "secret"
+end
+
+-- Step curves for the secret-health mode: 1 inside the range, 0 outside.
+function P:BuildCurves()
+    if self.curves then return true end
+    local CU, E = _G.C_CurveUtil, _G.Enum
+    if not (CU and CU.CreateCurve and _G.UnitHealthPercent) then
+        self.curveError = "this client has no C_CurveUtil.CreateCurve or UnitHealthPercent"
+        return false
+    end
+    local ok, curves = pcall(function()
+        local function step(points)
+            local c = CU.CreateCurve()
+            if E and E.LuaCurveType and E.LuaCurveType.Step then c:SetType(E.LuaCurveType.Step) end
+            for _, pt in ipairs(points) do c:AddPoint(pt[1], pt[2]) end
+            return c
+        end
+        local w, d = self.db.warn / 100 + 0.001, self.db.danger / 100 + 0.001
+        return {
+            danger = step({ { 0, 1 }, { d, 0 } }),
+            warnOnly = step({ { 0, 0 }, { d, 1 }, { w, 0 } }),
+        }
+    end)
+    if ok then
+        self.curves, self.curveError = curves, nil
+        return true
+    end
+    self.curveError = tostring(curves)
+    return false
 end
 
 -- The new level for `pct`, starting from the current one (keeps an alert on
 -- until health is MARGIN above its line).
 function P:NextLevel(pct)
-    if not pct or not self.db.enabled then return NONE end
+    if type(pct) ~= "number" or not self.db.enabled then return NONE end
     local level, db = self.level or NONE, self.db
     if pct <= db.danger then return DANGER end
     if level == DANGER and pct <= db.danger + MARGIN then return DANGER end
@@ -80,23 +139,28 @@ end
 function P:CreateGlow()
     local f = CreateFrame("Frame", "QoLPetHealthGlow", UIParent)
     f:SetFrameStrata("MEDIUM")
-    local tex = f:CreateTexture(nil, "OVERLAY")
-    tex:SetTexture("Interface\\Buttons\\UI-ActionButton-Border")
-    tex:SetBlendMode("ADD")
-    tex:SetAllPoints()
-    f.tex = tex
+    self:AddGlowTextures(f, function(tex) tex:SetTexture("Interface\\Buttons\\UI-ActionButton-Border") end)
     f:Hide()
     self.glow = f
 
     local b = CreateFrame("Frame", "QoLPetHealthBarGlow", UIParent)
     b:SetFrameStrata("MEDIUM")
-    local bar = b:CreateTexture(nil, "OVERLAY")
-    bar:SetColorTexture(1, 1, 1, 0.6)
-    bar:SetBlendMode("ADD")
-    bar:SetAllPoints()
-    b.tex = bar
+    self:AddGlowTextures(b, function(tex) tex:SetColorTexture(1, 1, 1, 0.6) end)
     b:Hide()
     self.barGlow = b
+end
+
+-- An orange (warning) and a red (danger) copy of the same glow, so the
+-- secret-health mode can fade each one by its own curve.
+function P:AddGlowTextures(f, setTexture)
+    for level, key in pairs({ [WARN] = "warnTex", [DANGER] = "dangerTex" }) do
+        local tex = f:CreateTexture(nil, "OVERLAY")
+        setTexture(tex)
+        tex:SetBlendMode("ADD")
+        tex:SetAllPoints()
+        tex:SetVertexColor(COLORS[level][1], COLORS[level][2], COLORS[level][3])
+        f[key] = tex
+    end
 end
 
 -- Copies a region's screen rectangle onto one of our UIParent frames.
@@ -223,14 +287,83 @@ function P:ShowText(pct)
     f:Show()
 end
 
+-- Shows or hides the portrait and health bar glows; warnAlpha/dangerAlpha are
+-- 0 or 1, or secret values from the curves.
+function P:ShowGlows(on, warnAlpha, dangerAlpha)
+    self:PlaceGlow()
+    local petFrame = _G.PetFrame
+    on = on and self.db.glow and petFrame and petFrame:IsShown()
+    for _, g in ipairs({ { self.glow, self.glowPlaced }, { self.barGlow, self.barPlaced } }) do
+        if on and g[2] then
+            g[1].warnTex:SetAlpha(warnAlpha)
+            g[1].dangerTex:SetAlpha(dangerAlpha)
+            g[1]:Show()
+        else
+            g[1]:Hide()
+        end
+    end
+end
+
+function P:HideAll()
+    self:ShowGlows(false)
+    self.textFrame:Hide()
+    self.screenGlow:Hide()
+end
+
+-- Secret-health mode: the game fades everything by the curves.
+function P:UpdateSecret()
+    if not self:BuildCurves() then
+        if not self.toldUnsupported then
+            self.toldUnsupported = true
+            QoL:Print("this client hides pet health from addons, so the pet health warning can't run. "
+                .. "Type /qol pet debug for details.")
+        end
+        self.level = NONE
+        self:HideAll()
+        return
+    end
+    self.level = SECRET
+    local warnAlpha = _G.UnitHealthPercent("pet", false, self.curves.warnOnly)
+    local dangerAlpha = _G.UnitHealthPercent("pet", false, self.curves.danger)
+    self:ShowGlows(true, warnAlpha, dangerAlpha)
+
+    local f = self.textFrame
+    if self.db.text then
+        f.text:SetText("PET IN DANGER")
+        f.text:SetAlpha(dangerAlpha)
+        f.hint:SetText(self:GetMendHint() or "")
+        f.hint:SetAlpha(dangerAlpha)
+        f.shownAt = false
+        f:SetAlpha(1)
+        f:Show()
+    else
+        f:Hide()
+    end
+    if self.db.screen then
+        self.screenGlow.tex:SetAlpha(dangerAlpha)
+        self.screenGlow:Show()
+    else
+        self.screenGlow:Hide()
+    end
+end
+
 -- Called when health changes, the pet changes, or a setting changes.
 function P:Update()
     if not self.glow then return end
     local pct = self:GetPetPct()
+    self.pct = pct
+    if pct == "secret" then
+        if self.db.enabled then self:UpdateSecret() else self.level = NONE; self:HideAll() end
+        return
+    end
+
     local old = self.level or NONE
     local level = self:NextLevel(pct)
     self.level = level
-    self.pct = pct
+    -- Undo anything the secret mode set.
+    self.textFrame.text:SetAlpha(1)
+    self.textFrame.hint:SetAlpha(1)
+    self.screenGlow.tex:SetAlpha(1)
 
     if level == DANGER and old ~= DANGER then
         if self.db.sound then self:PlaySound() end
@@ -242,18 +375,7 @@ function P:Update()
         self.textFrame.text:SetText(("PET %d%%"):format(pct))
     end
 
-    self:PlaceGlow()
-    local c = COLORS[level]
-    local petFrame = _G.PetFrame
-    local glowOn = level ~= NONE and self.db.glow and petFrame and petFrame:IsShown()
-    for _, g in ipairs({ { self.glow, self.glowPlaced }, { self.barGlow, self.barPlaced } }) do
-        if glowOn and g[2] then
-            g[1].tex:SetVertexColor(c[1], c[2], c[3])
-            g[1]:Show()
-        else
-            g[1]:Hide()
-        end
-    end
+    self:ShowGlows(level ~= NONE, level == WARN and 1 or 0, level == DANGER and 1 or 0)
     self.screenGlow:SetShown(level == DANGER and self.db.screen)
 end
 
@@ -262,12 +384,10 @@ function P:Animate()
     local now = _G.GetTime()
     local level = self.level or NONE
     local wave = math.abs(math.sin(now * (PULSE_SPEED[level] or 0)))
-    local alpha = level == DANGER and (0.3 + 0.7 * wave) or (0.45 + 0.4 * wave)
+    local alpha = level == WARN and (0.45 + 0.4 * wave) or (0.3 + 0.7 * wave)
     self.glow:SetAlpha(alpha)
     self.barGlow:SetAlpha(alpha)
-    if self.screenGlow:IsShown() then
-        self.screenGlow:SetAlpha(0.25 + 0.5 * wave)
-    end
+    self.screenGlow:SetAlpha(0.25 + 0.5 * wave)
     local f = self.textFrame
     if f:IsShown() and f.shownAt then
         local age = now - f.shownAt
@@ -288,9 +408,7 @@ function P:SafeCall(method)
     local ok, err = pcall(self[method], self)
     if not ok then
         self.broken = true
-        for _, f in ipairs({ self.glow, self.barGlow, self.textFrame, self.screenGlow }) do
-            pcall(f.Hide, f)
-        end
+            pcall(self.HideAll, self)
         QoL:Print("|cffff5555pet health warning hit an error and turned itself off until /reload:|r " .. tostring(err))
     end
 end
@@ -371,6 +489,7 @@ end
 -- Keeps danger below warning: moving one past the other pushes the other along.
 function P:SetWarn(v)
     self.db.warn = roundPct(v, 10, 95)
+    self.curves = nil
     if self.db.danger >= self.db.warn then self.db.danger = self.db.warn - 5 end
     self:SafeUpdate()
     refreshHelpers()
@@ -378,30 +497,33 @@ end
 
 function P:SetDanger(v)
     self.db.danger = roundPct(v, 5, 90)
+    self.curves = nil
     if self.db.danger >= self.db.warn then self.db.warn = self.db.danger + 5 end
     self:SafeUpdate()
     refreshHelpers()
 end
 
 function P:PrintDebug()
-    local p = function(...) print("  " .. string.format(...)) end
+    -- Each line on its own, so one failing line doesn't hide the rest.
+    local p = function(fmt, ...)
+        local n, args = select("#", ...), { ... }
+        local ok, line = pcall(function() return string.format(fmt, tostringall(unpack(args, 1, n))) end)
+        print("  " .. (ok and line or ("(line failed: " .. tostring(line) .. ")")))
+    end
     local db = self.db
     QoL:Print("pet health debug")
-    p("started: %s, on: %s, glow: %s, sound: %s, text: %s, screen: %s",
-        tostring(self.glow ~= nil and self.driver ~= nil), tostring(db.enabled), tostring(db.glow),
-        tostring(db.sound), tostring(db.text), tostring(db.screen))
-    p("warning at %s%%, danger at %s%%", tostring(db.warn), tostring(db.danger))
-    p("pet: %s (%s), dead: %s, health: %s / %s", tostring(UnitExists("pet")), tostring(UnitName("pet")),
-        tostring(_G.UnitIsDead("pet")), tostring(_G.UnitHealth("pet")), tostring(_G.UnitHealthMax("pet")))
-    p("on taxi: %s, pet %%: %s, alert level: %s (0 none, 1 warning, 2 danger)",
-        tostring(_G.UnitOnTaxi and _G.UnitOnTaxi("player")), tostring((self:GetPetPct())), tostring(self.level))
-    local pf, portrait = _G.PetFrame, _G.PetPortrait
-    p("PetFrame: %s (shown: %s), PetPortrait: %s, glow shown: %s",
-        tostring(pf ~= nil), tostring(pf and pf:IsShown()), tostring(portrait ~= nil),
-        tostring(self.glow and self.glow:IsShown()))
-    p("glow placed: %s, bar placed: %s, in combat: %s", tostring(self.glowPlaced), tostring(self.barPlaced),
-        tostring(InCombatLockdown()))
-    p("pet health events seen: %s", tostring(self.eventCount))
+    p("client %s, started: %s, stopped by an error: %s", (select(1, GetBuildInfo())),
+        self.glow ~= nil and self.driver ~= nil, self.broken)
+    p("on: %s, glow: %s, sound: %s, text: %s, screen: %s", db.enabled, db.glow, db.sound, db.text, db.screen)
+    p("warning at %s%%, danger at %s%%", db.warn, db.danger)
+    p("pet: %s (%s), health: %s / %s", UnitExists("pet"), UnitName("pet"), _G.UnitHealth("pet"), _G.UnitHealthMax("pet"))
+    p("health is secret: %s, UnitHealthPercent: %s, C_CurveUtil: %s",
+        isSecret(_G.UnitHealth("pet")), _G.UnitHealthPercent ~= nil, _G.C_CurveUtil ~= nil)
+    p("pet %%: %s, alert level: %s (0 none, 1 warning, 2 danger, 3 secret mode)", (self:GetPetPct()), self.level)
+    p("curves: %s, curve problem: %s", self.curves ~= nil, self.curveError)
+    p("PetFrame shown: %s, glow placed: %s, bar placed: %s, in combat: %s",
+        _G.PetFrame and _G.PetFrame:IsShown(), self.glowPlaced, self.barPlaced, InCombatLockdown())
+    p("pet health events seen: %s", self.eventCount)
 end
 
 local PARTS = { glow = "glow around the pet portrait", sound = "danger sound",

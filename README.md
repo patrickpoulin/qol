@@ -82,6 +82,7 @@ Makes it obvious when your pet (hunter pet or warlock demon) is close to dying.
 - **Danger** (20% by default): the glow turns into a fast red pulse, the raid warning sound plays once, and `PET 18%` shows in big text above your character for a few seconds. Hunters also see **Mend Pet** under it when it's ready to cast.
 - An optional red glow at the screen edges joins in at the danger level. It's off by default because it looks like your own low health warning.
 - Each alert only clears once your pet's health is 5% above its line, so it doesn't flicker on and off.
+- On clients that hide unit health from addons (WoW Forever 1.60 and later), the game itself fades the glows and a "PET IN DANGER" text in by your pet's health. That mode has no sound, because the addon never sees the number.
 - Every part has its own checkbox on the **Misc** tab, with sliders for both levels.
 
 | Command | What it does |
