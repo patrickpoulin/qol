@@ -71,8 +71,12 @@ function P:NextLevel(pct)
     return NONE
 end
 
--- Glow around the pet portrait. Our own frame on top of the pet frame, so
--- combat lockdown never gets in the way.
+-- Glow around the pet portrait and a wash over its health bar.
+--
+-- These are never anchored to the pet frame: a frame anchored to a protected
+-- frame (the pet frame is one) can't be shown, hidden or moved in combat, and
+-- the game blocks the addon when it tries. Instead they sit on UIParent at the
+-- pet frame's screen position, which is only copied while out of combat.
 function P:CreateGlow()
     local f = CreateFrame("Frame", "QoLPetHealthGlow", UIParent)
     f:SetFrameStrata("MEDIUM")
@@ -81,37 +85,49 @@ function P:CreateGlow()
     tex:SetBlendMode("ADD")
     tex:SetAllPoints()
     f.tex = tex
-    -- A solid wash over the pet's health bar too, so it reads at a glance.
-    local bar = f:CreateTexture(nil, "OVERLAY")
-    bar:SetColorTexture(1, 1, 1, 0.6)
-    bar:SetBlendMode("ADD")
-    bar:Hide()
-    f.bar = bar
     f:Hide()
     self.glow = f
+
+    local b = CreateFrame("Frame", "QoLPetHealthBarGlow", UIParent)
+    b:SetFrameStrata("MEDIUM")
+    local bar = b:CreateTexture(nil, "OVERLAY")
+    bar:SetColorTexture(1, 1, 1, 0.6)
+    bar:SetBlendMode("ADD")
+    bar:SetAllPoints()
+    b.tex = bar
+    b:Hide()
+    self.barGlow = b
 end
 
+-- Copies a region's screen rectangle onto one of our UIParent frames.
+local function copyRect(frame, region)
+    local left, bottom, width, height = region:GetLeft(), region:GetBottom(), region:GetWidth(), region:GetHeight()
+    if not (left and bottom and width and height) or width <= 0 then return false end
+    local scale = region:GetEffectiveScale() / UIParent:GetEffectiveScale()
+    frame:ClearAllPoints()
+    frame:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", left * scale, bottom * scale)
+    frame:SetSize(width * scale, height * scale)
+    return true
+end
+
+-- Lines the glows up with the pet frame. Only out of combat; in combat they
+-- stay where they were last put (the pet frame doesn't move on its own).
 function P:PlaceGlow()
-    local f = self.glow
-    local portrait = _G.PetPortrait
-    local petFrame = _G.PetFrame
-    f:ClearAllPoints()
-    if portrait and petFrame and petFrame:IsShown() then
-        local size = (portrait:GetWidth() or 37) * 2
-        f:SetSize(size, size)
-        f:SetPoint("CENTER", portrait, "CENTER", 0, 0)
-        f:SetFrameLevel(petFrame:GetFrameLevel() + 10)
-        local healthBar = _G.PetFrameHealthBar
-        f.bar:ClearAllPoints()
-        if healthBar then
-            f.bar:SetAllPoints(healthBar)
-            f.bar:Show()
-        else
-            f.bar:Hide()
-        end
-        return true
+    if InCombatLockdown() then return end
+    local portrait, petFrame, healthBar = _G.PetPortrait, _G.PetFrame, _G.PetFrameHealthBar
+    if not (petFrame and petFrame:IsShown()) then return end
+    if portrait and copyRect(self.glow, portrait) then
+        -- The glow texture's ring is about half its size, so double it around the portrait.
+        local w, h = self.glow:GetWidth(), self.glow:GetHeight()
+        local x, y = self.glow:GetLeft(), self.glow:GetBottom()
+        self.glow:ClearAllPoints()
+        self.glow:SetPoint("CENTER", UIParent, "BOTTOMLEFT", x + w / 2, y + h / 2)
+        self.glow:SetSize(w * 2, h * 2)
+        self.glowPlaced = true
     end
-    return false
+    if healthBar and copyRect(self.barGlow, healthBar) then
+        self.barPlaced = true
+    end
 end
 
 -- Big text just above your character.
@@ -226,13 +242,17 @@ function P:Update()
         self.textFrame.text:SetText(("PET %d%%"):format(pct))
     end
 
+    self:PlaceGlow()
     local c = COLORS[level]
-    if level ~= NONE and self.db.glow and self:PlaceGlow() then
-        self.glow.tex:SetVertexColor(c[1], c[2], c[3])
-        self.glow.bar:SetVertexColor(c[1], c[2], c[3])
-        self.glow:Show()
-    else
-        self.glow:Hide()
+    local petFrame = _G.PetFrame
+    local glowOn = level ~= NONE and self.db.glow and petFrame and petFrame:IsShown()
+    for _, g in ipairs({ { self.glow, self.glowPlaced }, { self.barGlow, self.barPlaced } }) do
+        if glowOn and g[2] then
+            g[1].tex:SetVertexColor(c[1], c[2], c[3])
+            g[1]:Show()
+        else
+            g[1]:Hide()
+        end
     end
     self.screenGlow:SetShown(level == DANGER and self.db.screen)
 end
@@ -242,9 +262,9 @@ function P:Animate()
     local now = _G.GetTime()
     local level = self.level or NONE
     local wave = math.abs(math.sin(now * (PULSE_SPEED[level] or 0)))
-    if self.glow:IsShown() then
-        self.glow:SetAlpha(level == DANGER and (0.3 + 0.7 * wave) or (0.45 + 0.4 * wave))
-    end
+    local alpha = level == DANGER and (0.3 + 0.7 * wave) or (0.45 + 0.4 * wave)
+    self.glow:SetAlpha(alpha)
+    self.barGlow:SetAlpha(alpha)
     if self.screenGlow:IsShown() then
         self.screenGlow:SetAlpha(0.25 + 0.5 * wave)
     end
@@ -261,9 +281,27 @@ end
 
 local POLL_INTERVAL = 0.2 -- seconds; backup in case health events don't fire for the pet
 
+-- Runs Update or Animate, and on an error says so once in chat and stops,
+-- instead of repeating the error several times a second.
+function P:SafeCall(method)
+    if self.broken then return end
+    local ok, err = pcall(self[method], self)
+    if not ok then
+        self.broken = true
+        for _, f in ipairs({ self.glow, self.barGlow, self.textFrame, self.screenGlow }) do
+            pcall(f.Hide, f)
+        end
+        QoL:Print("|cffff5555pet health warning hit an error and turned itself off until /reload:|r " .. tostring(err))
+    end
+end
+
+function P:SafeUpdate()
+    self:SafeCall("Update")
+end
+
 local EVENTS = {
     "UNIT_HEALTH", "UNIT_HEALTH_FREQUENT", "UNIT_MAXHEALTH", "UNIT_PET",
-    "PLAYER_ENTERING_WORLD", "PLAYER_CONTROL_LOST", "PLAYER_CONTROL_GAINED",
+    "PLAYER_ENTERING_WORLD", "PLAYER_CONTROL_LOST", "PLAYER_CONTROL_GAINED", "PLAYER_REGEN_ENABLED",
 }
 
 function P:OnEnable()
@@ -284,7 +322,7 @@ function P:OnEnable()
         end
         if event == "UNIT_PET" and unit ~= "player" then return end
         P.eventCount = P.eventCount + 1
-        P:Update()
+        P:SafeUpdate()
     end)
     -- Check pet health a few times a second as well as on events, and pulse
     -- the glows every frame while an alert is up.
@@ -293,11 +331,11 @@ function P:OnEnable()
         elapsed = elapsed + dt
         if elapsed >= POLL_INTERVAL then
             elapsed = 0
-            if P.db.enabled and (P.testPct or UnitExists("pet") or (P.level or NONE) ~= NONE) then P:Update() end
+            if P.db.enabled and (P.testPct or UnitExists("pet") or (P.level or NONE) ~= NONE) then P:SafeUpdate() end
         end
-        if (P.level or NONE) ~= NONE then P:Animate() end
+        if (P.level or NONE) ~= NONE then P:SafeCall("Animate") end
     end)
-    self:Update()
+    self:SafeUpdate()
 end
 
 -- Walks through warning then danger so you can see and hear each alert.
@@ -315,14 +353,14 @@ function P:Test()
         C_Timer.After(step[1], function()
             P.testPct = step[2]
             if not step[2] then P.testing = nil end
-            P:Update()
+            P:SafeUpdate()
         end)
     end
 end
 
 function P:SetOption(key, on)
     self.db[key] = on
-    self:Update()
+    self:SafeUpdate()
     refreshHelpers()
 end
 
@@ -334,14 +372,14 @@ end
 function P:SetWarn(v)
     self.db.warn = roundPct(v, 10, 95)
     if self.db.danger >= self.db.warn then self.db.danger = self.db.warn - 5 end
-    self:Update()
+    self:SafeUpdate()
     refreshHelpers()
 end
 
 function P:SetDanger(v)
     self.db.danger = roundPct(v, 5, 90)
     if self.db.danger >= self.db.warn then self.db.warn = self.db.danger + 5 end
-    self:Update()
+    self:SafeUpdate()
     refreshHelpers()
 end
 
@@ -356,11 +394,13 @@ function P:PrintDebug()
     p("pet: %s (%s), dead: %s, health: %s / %s", tostring(UnitExists("pet")), tostring(UnitName("pet")),
         tostring(_G.UnitIsDead("pet")), tostring(_G.UnitHealth("pet")), tostring(_G.UnitHealthMax("pet")))
     p("on taxi: %s, pet %%: %s, alert level: %s (0 none, 1 warning, 2 danger)",
-        tostring(_G.UnitOnTaxi and _G.UnitOnTaxi("player")), tostring(self:GetPetPct()), tostring(self.level))
+        tostring(_G.UnitOnTaxi and _G.UnitOnTaxi("player")), tostring((self:GetPetPct())), tostring(self.level))
     local pf, portrait = _G.PetFrame, _G.PetPortrait
     p("PetFrame: %s (shown: %s), PetPortrait: %s, glow shown: %s",
         tostring(pf ~= nil), tostring(pf and pf:IsShown()), tostring(portrait ~= nil),
         tostring(self.glow and self.glow:IsShown()))
+    p("glow placed: %s, bar placed: %s, in combat: %s", tostring(self.glowPlaced), tostring(self.barPlaced),
+        tostring(InCombatLockdown()))
     p("pet health events seen: %s", tostring(self.eventCount))
 end
 
