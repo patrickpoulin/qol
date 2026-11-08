@@ -6,6 +6,8 @@ local QoL = ns.QoL
 local Z = QoL:RegisterModule("zones", {
     name = "Zone Levels",
     description = "questing zone level list on the world map",
+    -- Factions whose zones are hidden from the list, e.g. { Alliance = true }.
+    charDefaults = { hidden = {} },
     slashHelp = {
         "/qol zones - open the world map with the zone level list",
     },
@@ -153,10 +155,35 @@ function Z:CreatePanel()
     panel:Hide()
     self.panel = panel
 
-    local legend = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    legend:SetPoint("TOPLEFT", 8, -6)
-    legend:SetText(FACTION_COLOR[H] .. "Horde|r  " .. FACTION_COLOR[A] .. "Alliance|r  "
-        .. FACTION_COLOR[C] .. "Contested|r")
+    -- Faction filters: click one to hide or show its zones.
+    self.filters = {}
+    local prev
+    for _, faction in ipairs({ H, A, C }) do
+        local f = CreateFrame("Button", nil, panel)
+        f:SetHeight(16)
+        f.text = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        f.text:SetPoint("LEFT")
+        f.faction = faction
+        if prev then
+            f:SetPoint("LEFT", prev, "RIGHT", 10, 0)
+        else
+            f:SetPoint("TOPLEFT", 8, -4)
+        end
+        f:SetScript("OnClick", function()
+            local hidden = self.charDB.hidden
+            hidden[faction] = not hidden[faction] or nil
+            self:RefreshRows()
+        end)
+        f:SetScript("OnEnter", function(btn)
+            GameTooltip:SetOwner(btn, "ANCHOR_TOP")
+            GameTooltip:SetText(("Click to %s %s zones"):format(
+                self.charDB.hidden[faction] and "show" or "hide", faction))
+            GameTooltip:Show()
+        end)
+        f:SetScript("OnLeave", GameTooltip_Hide)
+        table.insert(self.filters, f)
+        prev = f
+    end
 
     local scroll = CreateFrame("ScrollFrame", nil, panel, "UIPanelScrollFrameTemplate")
     scroll:SetPoint("TOPLEFT", 6, -22)
@@ -165,18 +192,16 @@ function Z:CreatePanel()
     child:SetWidth(PANEL_WIDTH - 32)
     scroll:SetScrollChild(child)
 
-    self.rows = {}
-    local y = 0
+    self.child = child
+    self.rows, self.headers = {}, {}
     for _, continent in ipairs(self.continents) do
         local header = child:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-        header:SetPoint("TOPLEFT", 2, -y - 2)
         header:SetText(continent.name)
-        y = y + ROW_HEIGHT + 4
+        header.rows = {}
+        table.insert(self.headers, header)
         for _, zone in ipairs(continent.zones) do
             local row = CreateFrame("Button", nil, child)
             row:SetHeight(ROW_HEIGHT)
-            row:SetPoint("TOPLEFT", 0, -y)
-            row:SetPoint("RIGHT", child, "RIGHT")
             row:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
             row.name = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
             row.name:SetPoint("LEFT", 6, 0)
@@ -187,17 +212,50 @@ function Z:CreatePanel()
             row:SetScript("OnEnter", onRowEnter)
             row:SetScript("OnLeave", GameTooltip_Hide)
             table.insert(self.rows, row)
-            y = y + ROW_HEIGHT
+            table.insert(header.rows, row)
         end
-        y = y + 6
     end
-    child:SetHeight(y)
 
     panel:SetScript("OnShow", function() self:RefreshRows() end)
 end
 
 -- Level colours depend on your level, so redraw each time the list opens.
+-- Also lays out the list, skipping zones of hidden factions.
 function Z:RefreshRows()
+    local hidden = self.charDB.hidden
+    for _, f in ipairs(self.filters) do
+        local color = hidden[f.faction] and "|cff606060" or FACTION_COLOR[f.faction]
+        f.text:SetText(color .. f.faction .. "|r")
+        f:SetWidth(f.text:GetStringWidth())
+    end
+
+    local child, y = self.child, 0
+    for _, header in ipairs(self.headers) do
+        local any = false
+        for _, row in ipairs(header.rows) do
+            if not hidden[row.zone[4]] then any = true end
+        end
+        header:SetShown(any)
+        if any then
+            header:SetPoint("TOPLEFT", child, "TOPLEFT", 2, -y - 2)
+            y = y + ROW_HEIGHT + 4
+            for _, row in ipairs(header.rows) do
+                local show = not hidden[row.zone[4]]
+                row:SetShown(show)
+                if show then
+                    row:ClearAllPoints()
+                    row:SetPoint("TOPLEFT", child, "TOPLEFT", 0, -y)
+                    row:SetPoint("RIGHT", child, "RIGHT")
+                    y = y + ROW_HEIGHT
+                end
+            end
+            y = y + 6
+        else
+            for _, row in ipairs(header.rows) do row:Hide() end
+        end
+    end
+    child:SetHeight(math.max(1, y))
+
     for _, row in ipairs(self.rows) do
         local zone = row.zone
         local star = zone[5] and " |cff88ccff*|r" or ""

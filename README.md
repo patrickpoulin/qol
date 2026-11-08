@@ -127,6 +127,7 @@ Forever's new docks (Stormwind Harbor to Auberdine, Southshore, Steamwheedle Por
 A **Zone Levels** button in the top-right corner of the world map opens a list of questing zones and their suggested levels, grouped by continent.
 
 - Zone names are coloured by faction: red for Horde, blue for Alliance, yellow for contested.
+- Click Horde, Alliance or Contested at the top of the list to hide or show those zones. Each character remembers its choice.
 - Level ranges are green when you're in range, red when the zone is above you and grey once you've outlevelled it.
 - Click a zone to show it on the map. Hover for details.
 - Zones new in WoW Forever have a blue `*`. Shen'dralas and Mount Hyjal levels aren't confirmed yet.
