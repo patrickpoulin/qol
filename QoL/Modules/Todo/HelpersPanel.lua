@@ -118,6 +118,16 @@ local HELPERS = {
         get = function() return T.db.bgAlpha end,
         set = function(v) T:SetBackgroundAlpha(v) end,
     },
+
+    { kind = "header", label = "Action bar" },
+    {
+        label = "Hide the gryphons beside the main action bar",
+        tooltip = "Hides the two gryphon pictures on the left and right ends of the main action bar. "
+            .. "Your buttons and keybinds are untouched, and it works in combat. "
+            .. "Type /qol gryphons to switch it from chat.",
+        get = function() return ns.ActionBar.db.hideGryphons end,
+        set = function(on) ns.ActionBar:SetHideGryphons(on) end,
+    },
 }
 
 local function setTooltip(frame, helper)
