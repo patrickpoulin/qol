@@ -19,30 +19,95 @@ local A = QoL:RegisterModule("gryphons", {
 })
 ns.ActionBar = A
 
--- Every place the end caps have lived: the 1.x layout uses globals, the newer
--- layout keeps them under MainMenuBar.EndCaps.
+-- Words that mark gryphon/wyvern end-cap art in a texture's name, atlas or file.
+local CAP_WORDS = { "endcap", "gryphon", "griffon", "wyvern" }
+
+local function safeString(fn, obj)
+    if not fn then return nil end
+    local ok, v = pcall(fn, obj)
+    if ok and type(v) == "string" then return v:lower() end
+    return nil
+end
+
+local function looksLikeCap(tex, key)
+    local texts = {
+        key and tostring(key):lower(),
+        safeString(tex.GetName, tex),
+        safeString(tex.GetAtlas, tex),
+        safeString(tex.GetTexture, tex),
+        safeString(tex.GetTextureFilePath, tex),
+    }
+    for _, text in pairs(texts) do
+        for _, word in ipairs(CAP_WORDS) do
+            if text:find(word, 1, true) then return true end
+        end
+    end
+    return false
+end
+
+local function isTexture(obj)
+    return type(obj) == "table" and obj.GetObjectType and obj.SetAlpha
+        and obj:GetObjectType() == "Texture"
+end
+
+-- The frames the end caps can hang off, across client layouts.
+local function barFrames()
+    local list = {}
+    for _, name in ipairs({ "MainMenuBar", "MainActionBar", "MainMenuBarArtFrame",
+        "MainMenuBarArtFrameBackground", "MainMenuBarOverlayFrame" }) do
+        if _G[name] then table.insert(list, _G[name]) end
+    end
+    return list
+end
+
 local function findCaps()
     local caps, seen = {}, {}
     local function add(tex)
-        if tex and not seen[tex] and tex.SetAlpha then
+        if isTexture(tex) and not seen[tex] then
             seen[tex] = true
             table.insert(caps, tex)
         end
     end
+    -- Known names first.
     add(_G.MainMenuBarLeftEndCap)
     add(_G.MainMenuBarRightEndCap)
-    local bar = _G.MainMenuBar
-    local ends = bar and bar.EndCaps
-    if ends then
-        add(ends.LeftEndCap)
-        add(ends.RightEndCap)
+    for _, frame in ipairs(barFrames()) do
+        local ends = frame.EndCaps
+        if type(ends) == "table" then
+            add(ends.LeftEndCap)
+            add(ends.RightEndCap)
+        end
+        add(frame.LeftEndCap)
+        add(frame.RightEndCap)
     end
-    local art = _G.MainMenuBarArtFrame
-    if art then
-        add(art.LeftEndCap)
-        add(art.RightEndCap)
+    -- Then search the bar and its child frames (two levels deep) for any
+    -- texture whose key, name, atlas or file says it is end-cap art.
+    local visited = {}
+    local function scan(frame, depth)
+        if visited[frame] or depth > 3 then return end
+        visited[frame] = true
+        for key, value in pairs(frame) do
+            if isTexture(value) and looksLikeCap(value, key) then add(value) end
+        end
+        if frame.GetRegions then
+            for _, region in ipairs({ frame:GetRegions() }) do
+                if isTexture(region) and looksLikeCap(region) then add(region) end
+            end
+        end
+        if frame.GetChildren then
+            for _, child in ipairs({ frame:GetChildren() }) do scan(child, depth + 1) end
+        end
+        if type(frame.EndCaps) == "table" then scan(frame.EndCaps, depth + 1) end
     end
+    for _, frame in ipairs(barFrames()) do scan(frame, 1) end
     return caps
+end
+
+local function describe(tex)
+    return ("%s atlas=%s file=%s"):format(
+        tostring(safeString(tex.GetName, tex) or safeString(tex.GetDebugName, tex) or "?"),
+        tostring(safeString(tex.GetAtlas, tex)), tostring(safeString(tex.GetTexture, tex)
+            or safeString(tex.GetTextureFilePath, tex)))
 end
 
 function A:Apply()
@@ -76,10 +141,35 @@ end
 
 function A:OnEnable()
     self:Apply()
+    -- Some layouts build the bar art a moment after login.
+    if C_Timer then C_Timer.After(2, function() A:Apply() end) end
     -- The bar can be rebuilt after a loading screen; check again then.
     local f = CreateFrame("Frame")
     f:RegisterEvent("PLAYER_ENTERING_WORLD")
     f:SetScript("OnEvent", function() A:Apply() end)
+end
+
+function A:PrintDebug()
+    local caps = findCaps()
+    QoL:Print(("gryphons hidden: %s, end caps found: %d"):format(tostring(self.db.hideGryphons), #caps))
+    for _, tex in ipairs(caps) do print("  cap: " .. describe(tex)) end
+    local names = {}
+    for _, frame in ipairs(barFrames()) do
+        table.insert(names, safeString(frame.GetName, frame) or "?")
+    end
+    print("  bar frames: " .. (#names > 0 and table.concat(names, ", ") or "none"))
+    if #caps == 0 then
+        -- List the bar's textures so the right ones can be picked out.
+        local n = 0
+        for _, frame in ipairs(barFrames()) do
+            for _, region in ipairs({ frame:GetRegions() }) do
+                if isTexture(region) and n < 15 then
+                    n = n + 1
+                    print("  texture: " .. describe(region))
+                end
+            end
+        end
+    end
 end
 
 function A:OnSlash(args)
@@ -89,8 +179,7 @@ function A:OnSlash(args)
     elseif cmd == "on" or cmd == "off" then
         self:SetHideGryphons(cmd == "on")
     elseif cmd == "debug" then
-        QoL:Print(("gryphons hidden: %s, end caps found: %d"):format(
-            tostring(self.db.hideGryphons), #findCaps()))
+        self:PrintDebug()
         return
     else
         QoL:Print("unknown command. Type /qol for help.")
