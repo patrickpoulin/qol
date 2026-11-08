@@ -1,6 +1,7 @@
 -- Built-in reference tabs: read-only text that ships with the addon.
 -- They sit after your own tabs and can't be renamed, deleted or given tasks.
 local _, ns = ...
+local QoL = ns.QoL
 local T = ns.Todo
 
 local SCROLLBAR_SPACE = 24
@@ -30,7 +31,7 @@ local PROFESSIONS = table.concat({
 }, "\n")
 
 T.referenceTabs = {
-    { id = "ref:professions", name = "Professions", text = PROFESSIONS, reference = true, tasks = {} },
+    { id = "ref:professions", name = "Campfires", text = PROFESSIONS, reference = true, tasks = {} },
 }
 
 function T:GetReferenceTab(id)
@@ -40,7 +41,7 @@ function T:GetReferenceTab(id)
 end
 
 function T:CreateReferencePanel(parent)
-    local scroll = CreateFrame("ScrollFrame", nil, parent, "UIPanelScrollFrameTemplate")
+    local scroll = QoL.CreateScrollFrame(parent)
     scroll:SetPoint("TOPLEFT", self.tabStrip, "BOTTOMLEFT", 0, -6)
     scroll:SetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT", -SCROLLBAR_SPACE, 4)
     local child = CreateFrame("Frame", nil, scroll)

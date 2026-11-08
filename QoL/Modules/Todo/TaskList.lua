@@ -1,5 +1,6 @@
 -- Task list: scrolling rows, inline edit, add box.
 local _, ns = ...
+local QoL = ns.QoL
 local T = ns.Todo
 
 local ROW_HEIGHT = 22
@@ -109,7 +110,7 @@ function T:CreateTaskList(parent)
     self.addBox = add
 
     -- Scrolling list between the tab strip and the bottom bar.
-    local scroll = CreateFrame("ScrollFrame", nil, parent, "UIPanelScrollFrameTemplate")
+    local scroll = QoL.CreateScrollFrame(parent)
     scroll:SetPoint("TOPLEFT", self.tabStrip, "BOTTOMLEFT", 0, -6)
     scroll:SetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT", -SCROLLBAR_SPACE, 28)
     local child = CreateFrame("Frame", nil, scroll)
@@ -124,6 +125,8 @@ function T:CreateTaskList(parent)
     self.emptyText = empty
 
     self:CreateReferencePanel(parent)
+    self:CreateFishingPanel(parent)
+    self:CreateHelpersPanel(parent)
 end
 
 function T:RefreshTasks()
@@ -133,13 +136,21 @@ function T:RefreshTasks()
     -- Built-in tabs show read-only text instead of tasks.
     self.scroll:SetShown(not tab.reference)
     self.addBox:SetShown(not tab.reference)
+    self.fishPanel:SetShown(tab.panel == "fishing")
+    self.helpersPanel:SetShown(tab.panel == "helpers")
+    self.refPanel:SetShown(tab.reference and not tab.panel)
     if tab.reference then
         self.emptyText:Hide()
         for _, row in ipairs(rows) do row:Hide() end
-        self:ShowReference(tab)
+        if tab.panel == "fishing" then
+            self:ShowFishing()
+        elseif tab.panel == "helpers" then
+            self:ShowHelpers()
+        else
+            self:ShowReference(tab)
+        end
         return
     end
-    self.refPanel:Hide()
 
     for i, task in ipairs(tab.tasks) do
         local row = rows[i] or createRow(self, self.scrollChild)
@@ -167,6 +178,8 @@ end
 function T:LayoutTasks()
     if not self.scroll then return end
     self:LayoutReference()
+    self:LayoutFishing()
+    self:LayoutHelpers()
     local width = self:GetContentWidth() - SCROLLBAR_SPACE
     if not width or width <= 0 then return end
     local tab = self:GetActiveTab()

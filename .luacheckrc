@@ -12,12 +12,21 @@ globals = {
 
 read_globals = {
     -- Lua / WoW helpers
-    "CopyTable", "time", "UnitLevel", "C_Map", "Enum",
+    "CopyTable", "time", "wipe", "UnitLevel", "C_Map", "Enum",
     -- Frames and UI
     "CreateFrame", "UIParent", "GameTooltip", "GameTooltip_Hide",
     "StaticPopup_Show", "MenuUtil", "WorldMapFrame", "ToggleWorldMap",
     "UIDropDownMenu_Initialize", "UIDropDownMenu_CreateInfo",
     "UIDropDownMenu_AddButton", "ToggleDropDownMenu",
+    -- Items, gear and combat
+    "GetInventoryItemID", "GetInventoryItemLink", "GetWeaponEnchantInfo",
+    "InCombatLockdown", "C_Timer", "ClearCursor", "PickupInventoryItem", "GetBuildInfo",
+    "GetCVar", "SetCVar", "UnitChannelInfo", "ClearOverrideBindings",
+    "SetOverrideBinding", "SetOverrideBindingClick",
+    "IsAltKeyDown", "IsControlKeyDown", "IsShiftKeyDown",
+    -- Units and threat
+    "UnitExists", "UnitIsDeadOrGhost", "UnitCanAttack", "UnitName", "UnitAffectingCombat",
+    "strjoin", "tostringall",
     -- Global strings
     "ACCEPT", "CANCEL", "YES", "NO",
 }

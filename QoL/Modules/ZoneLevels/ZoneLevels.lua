@@ -207,8 +207,16 @@ function Z:RefreshRows()
 end
 
 function Z:OnEnable()
-    if not WorldMapFrame then return end
-    self:CreatePanel()
+    if WorldMapFrame then return self:CreatePanel() end
+    -- The world map can load on demand; build the button once it appears.
+    local loader = CreateFrame("Frame")
+    loader:RegisterEvent("ADDON_LOADED")
+    loader:SetScript("OnEvent", function()
+        if WorldMapFrame then
+            loader:UnregisterAllEvents()
+            self:CreatePanel()
+        end
+    end)
 end
 
 function Z:OnSlash()

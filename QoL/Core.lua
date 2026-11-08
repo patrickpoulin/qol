@@ -72,7 +72,14 @@ events:SetScript("OnEvent", function(_, event, arg1)
     elseif event == "PLAYER_LOGIN" then
         for _, key in ipairs(QoL.moduleOrder) do
             local mod = QoL.modules[key]
-            if mod.OnEnable then mod:OnEnable() end
+            if mod.OnEnable then
+                -- Report a failure in chat instead of silently showing nothing.
+                local ok, err = pcall(mod.OnEnable, mod)
+                if not ok then
+                    QoL:Print(("|cffff5555%s failed to start:|r %s"):format(mod.name or key, tostring(err)))
+                end
+            end
         end
+        QoL:Print("loaded. Type /qol to show the window or list commands.")
     end
 end)
