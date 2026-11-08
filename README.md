@@ -57,7 +57,7 @@ Shows your threat on the enemy you have targeted, as a small number just above t
 
 ### Misc tab
 
-A built-in tab in the QoL window with on/off switches and settings: the threat % checkbox, the zeppelin pins checkbox, and a slider for how see-through the window's background is (the text and border stay solid).
+A built-in tab in the QoL window with on/off switches and settings: the threat % checkbox, the pet health warning switches and levels, the zeppelin pins checkbox, and a slider for how see-through the window's background is (the text and border stay solid).
 
 - A small face and your % to pull aggro: `100%` means you pull (or already have it). The face and number follow the game's threat colours: grey, yellow when you are close to pulling, orange, then red when the mob is on you. The face smiles while your threat is low, goes to a flat mouth when you are close (yellow and orange), and opens its mouth once the mob is on you.
 - It reads the game's own threat API (`UnitDetailedThreatSituation`). If the client doesn't have it, QoL uses LibThreatClassic2 when another addon (such as Details! or ThreatClassic2) ships it. With neither, nothing is shown.
@@ -73,6 +73,24 @@ A built-in tab in the QoL window with on/off switches and settings: the threat %
 | `/qol threat debug` | Print which threat API the game has and what it returns for your target |
 
 To check by hand: `/dump UnitDetailedThreatSituation` prints `function` if the client has it. Then attack a mob, keep it targeted and run `/dump UnitDetailedThreatSituation("player", "target")`. It returns whether you are tanking, the threat status (0 to 3), your % to pull, your raw %, and your threat value.
+
+### Pet Health (`/qol pet`)
+
+Makes it obvious when your pet (hunter pet or warlock demon) is close to dying.
+
+- **Warning** (35% health by default): a slow orange glow around the pet portrait.
+- **Danger** (20% by default): the glow turns into a fast red pulse, the raid warning sound plays once, and `PET 18%` shows in big text above your character for a few seconds. Hunters also see **Mend Pet** under it when it's ready to cast.
+- An optional red glow at the screen edges joins in at the danger level. It's off by default because it looks like your own low health warning.
+- Each alert only clears once your pet's health is 5% above its line, so it doesn't flicker on and off.
+- Every part has its own checkbox on the **Misc** tab, with sliders for both levels.
+
+| Command | What it does |
+| --- | --- |
+| `/qol pet` / `on` / `off` | Turn the whole warning on or off |
+| `/qol pet test` | Preview the warning, then the danger alert |
+| `/qol pet warn <%>` | Set the warning level |
+| `/qol pet danger <%>` | Set the danger level |
+| `/qol pet glow` / `sound` / `text` / `screen` `on` / `off` | Turn one part on or off |
 
 ### Zeppelins (`/qol zeppelins`)
 

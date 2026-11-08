@@ -29,6 +29,57 @@ local HELPERS = {
         set = function(on) ns.Threat:SetPlateEnabled(on) end,
     },
     {
+        label = "Warn when your pet's health is low",
+        tooltip = "Turns the whole low pet health warning on or off. "
+            .. "Type /qol pet test to preview it.",
+        get = function() return ns.PetHealth.db.enabled end,
+        set = function(on) ns.PetHealth:SetOption("enabled", on) end,
+    },
+    {
+        label = "Pet: glow around the pet portrait",
+        tooltip = "A slow orange glow at the warning level, then a fast red pulse at the danger level.",
+        get = function() return ns.PetHealth.db.glow end,
+        set = function(on) ns.PetHealth:SetOption("glow", on) end,
+    },
+    {
+        label = "Pet: play a sound at the danger level",
+        tooltip = "Plays the raid warning sound once when your pet drops to the danger level.",
+        get = function() return ns.PetHealth.db.sound end,
+        set = function(on) ns.PetHealth:SetOption("sound", on) end,
+    },
+    {
+        label = "Pet: big text at the danger level",
+        tooltip = "Shows PET and its health % above your character for a few seconds. "
+            .. "Hunters also see Mend Pet when it's ready to cast.",
+        get = function() return ns.PetHealth.db.text end,
+        set = function(on) ns.PetHealth:SetOption("text", on) end,
+    },
+    {
+        label = "Pet: red glow at the screen edges at the danger level",
+        tooltip = "Pulses the edges of the screen red while your pet is at the danger level. "
+            .. "Off by default because it looks a lot like your own low health warning.",
+        get = function() return ns.PetHealth.db.screen end,
+        set = function(on) ns.PetHealth:SetOption("screen", on) end,
+    },
+    {
+        kind = "slider",
+        label = "Pet warning level",
+        tooltip = "The orange glow starts when your pet's health drops to this %.",
+        min = 10, max = 95, step = 5,
+        format = function(v) return ("%d%%"):format(v) end,
+        get = function() return ns.PetHealth.db.warn end,
+        set = function(v) ns.PetHealth:SetWarn(v) end,
+    },
+    {
+        kind = "slider",
+        label = "Pet danger level",
+        tooltip = "The red pulse, sound and text start when your pet's health drops to this %.",
+        min = 5, max = 90, step = 5,
+        format = function(v) return ("%d%%"):format(v) end,
+        get = function() return ns.PetHealth.db.danger end,
+        set = function(v) ns.PetHealth:SetDanger(v) end,
+    },
+    {
         label = "Show zeppelin docks on the map and minimap",
         tooltip = "Puts a pin on every zeppelin platform. Hover it to see where that zeppelin goes. "
             .. "Type /qol zeppelins list to print them all in chat.",
