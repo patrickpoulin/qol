@@ -40,6 +40,7 @@ local P = QoL:RegisterModule("pet", {
         "/qol pet test - preview the warning and danger alerts",
         "/qol pet warn <%> | danger <%> - set when each alert starts",
         "/qol pet glow | sound | text | screen on | off - turn one part on or off",
+        "/qol pet debug - print what QoL sees about your pet",
     },
 })
 ns.PetHealth = P
@@ -80,6 +81,12 @@ function P:CreateGlow()
     tex:SetBlendMode("ADD")
     tex:SetAllPoints()
     f.tex = tex
+    -- A solid wash over the pet's health bar too, so it reads at a glance.
+    local bar = f:CreateTexture(nil, "OVERLAY")
+    bar:SetColorTexture(1, 1, 1, 0.6)
+    bar:SetBlendMode("ADD")
+    bar:Hide()
+    f.bar = bar
     f:Hide()
     self.glow = f
 end
@@ -94,6 +101,14 @@ function P:PlaceGlow()
         f:SetSize(size, size)
         f:SetPoint("CENTER", portrait, "CENTER", 0, 0)
         f:SetFrameLevel(petFrame:GetFrameLevel() + 10)
+        local healthBar = _G.PetFrameHealthBar
+        f.bar:ClearAllPoints()
+        if healthBar then
+            f.bar:SetAllPoints(healthBar)
+            f.bar:Show()
+        else
+            f.bar:Hide()
+        end
         return true
     end
     return false
@@ -133,18 +148,45 @@ function P:CreateScreenGlow()
     self.screenGlow = f
 end
 
+-- Spell API moved into C_Spell on newer clients; use whichever this one has.
+local function spellName(id)
+    local C_Spell = _G.C_Spell
+    if C_Spell and C_Spell.GetSpellName then return C_Spell.GetSpellName(id) end
+    if _G.GetSpellInfo then return (_G.GetSpellInfo(id)) end
+end
+
+local function spellUsable(name)
+    if _G.IsUsableSpell then return _G.IsUsableSpell(name) end
+    local C_Spell = _G.C_Spell
+    if C_Spell and C_Spell.IsSpellUsable then return C_Spell.IsSpellUsable(name) end
+end
+
+local function spellCooldown(name)
+    if _G.GetSpellCooldown then return _G.GetSpellCooldown(name) end
+    local C_Spell = _G.C_Spell
+    if C_Spell and C_Spell.GetSpellCooldown then
+        local info = C_Spell.GetSpellCooldown(name)
+        if info then return info.startTime, info.duration end
+    end
+end
+
 -- "Mend Pet" when a hunter could cast it right now, otherwise nil.
-function P:GetMendHint()
-    if select(2, _G.UnitClass("player")) ~= "HUNTER" or not _G.GetSpellInfo then return end
-    local name = _G.GetSpellInfo(MEND_PET_ID)
+local function mendHint()
+    if select(2, _G.UnitClass("player")) ~= "HUNTER" then return end
+    local name = spellName(MEND_PET_ID)
     if not name then return end
     if UnitChannelInfo and UnitChannelInfo("player") == name then return end
-    local usable = _G.IsUsableSpell and _G.IsUsableSpell(name)
-    if not usable then return end
-    local start, duration = _G.GetSpellCooldown(name)
+    if not spellUsable(name) then return end
+    local start, duration = spellCooldown(name)
     -- A duration of 1.5s or less is just the global cooldown.
     if start and start > 0 and duration and duration > 1.5 then return end
     return name
+end
+
+function P:GetMendHint()
+    -- Never let the hint break the rest of the alert.
+    local ok, name = pcall(mendHint)
+    if ok then return name end
 end
 
 function P:PlaySound()
@@ -187,12 +229,12 @@ function P:Update()
     local c = COLORS[level]
     if level ~= NONE and self.db.glow and self:PlaceGlow() then
         self.glow.tex:SetVertexColor(c[1], c[2], c[3])
+        self.glow.bar:SetVertexColor(c[1], c[2], c[3])
         self.glow:Show()
     else
         self.glow:Hide()
     end
     self.screenGlow:SetShown(level == DANGER and self.db.screen)
-    self.driver:SetScript("OnUpdate", level ~= NONE and self.onUpdate or nil)
 end
 
 -- Pulses the glows and fades the text while an alert is up.
@@ -217,6 +259,8 @@ function P:Animate()
     end
 end
 
+local POLL_INTERVAL = 0.2 -- seconds; backup in case health events don't fire for the pet
+
 local EVENTS = {
     "UNIT_HEALTH", "UNIT_HEALTH_FREQUENT", "UNIT_MAXHEALTH", "UNIT_PET",
     "PLAYER_ENTERING_WORLD", "PLAYER_CONTROL_LOST", "PLAYER_CONTROL_GAINED",
@@ -232,15 +276,27 @@ function P:OnEnable()
         -- Unknown events error on some clients; skip them.
         pcall(driver.RegisterEvent, driver, event)
     end
+    self.eventCount = 0
     driver:SetScript("OnEvent", function(_, event, unit)
         if (event == "UNIT_HEALTH" or event == "UNIT_HEALTH_FREQUENT" or event == "UNIT_MAXHEALTH")
             and unit ~= "pet" then
             return
         end
         if event == "UNIT_PET" and unit ~= "player" then return end
+        P.eventCount = P.eventCount + 1
         P:Update()
     end)
-    self.onUpdate = function() P:Animate() end
+    -- Check pet health a few times a second as well as on events, and pulse
+    -- the glows every frame while an alert is up.
+    local elapsed = 0
+    driver:SetScript("OnUpdate", function(_, dt)
+        elapsed = elapsed + dt
+        if elapsed >= POLL_INTERVAL then
+            elapsed = 0
+            if P.db.enabled and (P.testPct or UnitExists("pet") or (P.level or NONE) ~= NONE) then P:Update() end
+        end
+        if (P.level or NONE) ~= NONE then P:Animate() end
+    end)
     self:Update()
 end
 
@@ -289,6 +345,25 @@ function P:SetDanger(v)
     refreshHelpers()
 end
 
+function P:PrintDebug()
+    local p = function(...) print("  " .. string.format(...)) end
+    local db = self.db
+    QoL:Print("pet health debug")
+    p("started: %s, on: %s, glow: %s, sound: %s, text: %s, screen: %s",
+        tostring(self.glow ~= nil and self.driver ~= nil), tostring(db.enabled), tostring(db.glow),
+        tostring(db.sound), tostring(db.text), tostring(db.screen))
+    p("warning at %s%%, danger at %s%%", tostring(db.warn), tostring(db.danger))
+    p("pet: %s (%s), dead: %s, health: %s / %s", tostring(UnitExists("pet")), tostring(UnitName("pet")),
+        tostring(_G.UnitIsDead("pet")), tostring(_G.UnitHealth("pet")), tostring(_G.UnitHealthMax("pet")))
+    p("on taxi: %s, pet %%: %s, alert level: %s (0 none, 1 warning, 2 danger)",
+        tostring(_G.UnitOnTaxi and _G.UnitOnTaxi("player")), tostring(self:GetPetPct()), tostring(self.level))
+    local pf, portrait = _G.PetFrame, _G.PetPortrait
+    p("PetFrame: %s (shown: %s), PetPortrait: %s, glow shown: %s",
+        tostring(pf ~= nil), tostring(pf and pf:IsShown()), tostring(portrait ~= nil),
+        tostring(self.glow and self.glow:IsShown()))
+    p("pet health events seen: %s", tostring(self.eventCount))
+end
+
 local PARTS = { glow = "glow around the pet portrait", sound = "danger sound",
     text = "danger text", screen = "red glow at the screen edges" }
 
@@ -299,6 +374,8 @@ function P:OnSlash(args)
         if cmd == "" then on = not self.db.enabled else on = cmd == "on" end
         self:SetOption("enabled", on)
         QoL:Print("low pet health warning is " .. (self.db.enabled and "on" or "off") .. ".")
+    elseif cmd == "debug" then
+        self:PrintDebug()
     elseif cmd == "test" then
         self:Test()
     elseif cmd == "warn" or cmd == "danger" then

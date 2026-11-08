@@ -91,6 +91,7 @@ Makes it obvious when your pet (hunter pet or warlock demon) is close to dying.
 | `/qol pet warn <%>` | Set the warning level |
 | `/qol pet danger <%>` | Set the danger level |
 | `/qol pet glow` / `sound` / `text` / `screen` `on` / `off` | Turn one part on or off |
+| `/qol pet debug` | Print your pet's health and what the warning sees |
 
 ### Zeppelins (`/qol zeppelins`)
 
