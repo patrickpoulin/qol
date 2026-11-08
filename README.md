@@ -57,7 +57,7 @@ Shows your threat on the enemy you have targeted, as a small number just above t
 
 ### Misc tab
 
-A built-in tab in the QoL window with on/off switches and settings, in sections: **Threat** (target frame and nameplate %), **Pet health** (the warning, its parts and both levels; the parts dim when the warning is off), **Map** (zeppelin and boat pins), **Window** (how see-through the background is; the text and border stay solid) and **Action bar** (hide the gryphons on either end of the main action bar).
+A built-in tab in the QoL window with on/off switches and settings, in sections: **Threat** (target frame and nameplate %), **Pet health** (the warning, its parts and both levels; the parts dim when the warning is off), **Map** (zeppelin, boat and flight master pins), **Window** (how see-through the background is; the text and border stay solid) and **Action bar** (hide the gryphons on either end of the main action bar).
 
 - A small face and your % to pull aggro: `100%` means you pull (or already have it). The face and number follow the game's threat colours: grey, yellow when you are close to pulling, orange, then red when the mob is on you. The face smiles while your threat is low, goes to a flat mouth when you are close (yellow and orange), and opens its mouth once the mob is on you.
 - It reads the game's own threat API (`UnitDetailedThreatSituation`). If the client doesn't have it, QoL uses LibThreatClassic2 when another addon (such as Details! or ThreatClassic2) ships it. With neither, nothing is shown.
@@ -146,6 +146,24 @@ Forever's new docks (Stormwind Harbor to Auberdine, Southshore, Steamwheedle Por
 | `/qol zeppelins here` | Standing on a platform, move that platform's pin to where you are |
 | `/qol zeppelins reset` | Put every moved pin back |
 | `/qol zeppelins debug` | Print the map IDs and positions QoL is using |
+### Flight masters (`/qol flights`)
+
+Puts a pin on the world map and minimap for every flight master, coloured by faction: **blue** for Alliance, **red** for Horde and **green** for neutral ones both factions can use (Ratchet and Marshal's Refuge). Hover a pin to see the flight master's name, what they are (gryphon master, wind rider master and so on), the town and the faction. Turn it on or off with the checkbox in the **Map** section of the Misc tab, or with `/qol flights`.
+
+- All 64 flight masters show by default, both factions. Tick **Only my faction's flight masters** (or `/qol flights mine`) to hide the other side's; neutral ones still show.
+- Spots come from QuestieDB's WoW Forever data, so they use Forever's own positions where Forever moved a flight master (Stormwind, Lakeshire and Light's Hope Chapel).
+- New in Forever: Grakna (Horde) and Gretchen Mayberry (Alliance) in the Riverglades, and Fayran Elthas (Alliance) in Mount Hyjal. Their tooltips say they haven't been checked in game.
+- Zephras Isle has no flight master in that data. It's reached by the skyboats on the zeppelin pins.
+- The druid-only flight masters in Thunder Bluff and Darnassus are left out.
+- City flight masters (Stormwind, Ironforge, Orgrimmar, Thunder Bluff, Undercity) show on the city map and on the continent map.
+
+| Command | What it does |
+| --- | --- |
+| `/qol flights` / `on` / `off` | Turn the flight master pins on or off |
+| `/qol flights mine` | Show only your faction's flight masters, or every faction's again |
+| `/qol flights list` | Print every flight master and where they are |
+| `/qol flights debug` | Print how many flight masters QoL could place, and which ones it couldn't |
+
 ### Zone Levels (`/qol zones`)
 
 A **Zone Levels** button in the top-right corner of the world map opens a list of questing zones and their suggested levels, grouped by continent.

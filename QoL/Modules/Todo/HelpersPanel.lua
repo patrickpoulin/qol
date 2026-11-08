@@ -107,6 +107,20 @@ local HELPERS = {
         get = function() return ns.Zeppelins.db.boats end,
         set = function(on) ns.Zeppelins:SetBoatsEnabled(on) end,
     },
+    {
+        label = "Show flight masters on the map and minimap",
+        tooltip = "Puts a pin on every flight master: blue for Alliance, red for Horde, green for both. "
+            .. "Hover it to see who it is and where. Type /qol flights list to print them all in chat.",
+        get = function() return ns.FlightMasters.db.enabled end,
+        set = function(on) ns.FlightMasters:SetEnabled(on) end,
+    },
+    {
+        indent = true, enabledIf = function() return ns.FlightMasters.db.enabled end,
+        label = "Only my faction's flight masters",
+        tooltip = "Hides the other faction's flight masters. Neutral ones, like Ratchet and Marshal's Refuge, still show.",
+        get = function() return ns.FlightMasters.db.ownFaction end,
+        set = function(on) ns.FlightMasters:SetOwnFactionOnly(on) end,
+    },
 
     { kind = "header", label = "Window" },
     {
