@@ -30,6 +30,16 @@ An on-screen to-do list.
 | `/qol todo lock` / `unlock` | Stop or allow moving and resizing |
 | `/qol todo reset` | Move the window back to the centre |
 
+### Zone Levels (`/qol zones`)
+
+A **Zone Levels** button in the top-right corner of the world map opens a list of questing zones and their suggested levels, grouped by continent.
+
+- Zone names are coloured by faction: red for Horde, blue for Alliance, yellow for contested.
+- Level ranges are green when you're in range, red when the zone is above you and grey once you've outlevelled it.
+- Click a zone to show it on the map. Hover for details.
+- Zones new in WoW Forever have a blue `*`. Shen'dralas and Mount Hyjal levels aren't confirmed yet.
+- `/qol zones` opens the map with the list showing.
+
 ## Install
 
 1. With WowUp: Get Addons, Install from URL, `https://github.com/patrickpoulin/qol`. Or by hand: copy the `QoL` folder into `World of Warcraft/_forever_/Interface/AddOns/`.

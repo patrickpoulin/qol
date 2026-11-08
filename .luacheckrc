@@ -12,10 +12,10 @@ globals = {
 
 read_globals = {
     -- Lua / WoW helpers
-    "CopyTable", "time",
+    "CopyTable", "time", "UnitLevel", "C_Map", "Enum",
     -- Frames and UI
     "CreateFrame", "UIParent", "GameTooltip", "GameTooltip_Hide",
-    "StaticPopup_Show", "MenuUtil",
+    "StaticPopup_Show", "MenuUtil", "WorldMapFrame", "ToggleWorldMap",
     "UIDropDownMenu_Initialize", "UIDropDownMenu_CreateInfo",
     "UIDropDownMenu_AddButton", "ToggleDropDownMenu",
     -- Global strings
