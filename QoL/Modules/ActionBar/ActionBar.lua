@@ -110,27 +110,64 @@ local function describe(tex)
             or safeString(tex.GetTextureFilePath, tex)))
 end
 
+-- Keep an object faded (and, for textures, hidden) whatever the game does to
+-- it, while the option is on. Only alpha and visibility of art are touched,
+-- never a protected frame, so this is safe in combat.
+local function enforce(obj)
+    if not A.db.hideGryphons or obj.qolSetting then return end
+    obj.qolSetting = true
+    obj:SetAlpha(0)
+    if obj.qolHideToo then obj:Hide() end
+    obj.qolSetting = nil
+end
+
+local function setHidden(obj, hide, hideToo)
+    if not obj.qolHooked then
+        obj.qolHooked = true
+        obj.qolHideToo = hideToo
+        hooksecurefunc(obj, "SetAlpha", enforce)
+        hooksecurefunc(obj, "Show", enforce)
+        if obj.SetShown then hooksecurefunc(obj, "SetShown", enforce) end
+    end
+    obj.qolSetting = true
+    obj:SetAlpha(hide and 0 or 1)
+    if hideToo then
+        if hide then obj:Hide() else obj:Show() end
+    end
+    obj.qolSetting = nil
+end
+
+local function isProtected(frame)
+    if not frame.IsProtected then return false end
+    local ok, protected = pcall(frame.IsProtected, frame)
+    return not ok or protected
+end
+
+-- The frames that hold the caps (e.g. MainActionBar.EndCaps), so the whole
+-- holder fades too. The action bar itself and anything protected are skipped.
+local function findHolders(caps)
+    local holders, seen, bars = {}, {}, {}
+    for _, bar in ipairs(barFrames()) do bars[bar] = true end
+    local function add(frame)
+        if type(frame) == "table" and frame.SetAlpha and not seen[frame] and not bars[frame]
+            and frame.GetObjectType and frame:GetObjectType() ~= "Texture" and not isProtected(frame) then
+            seen[frame] = true
+            table.insert(holders, frame)
+        end
+    end
+    for _, bar in ipairs(barFrames()) do add(bar.EndCaps) end
+    for _, tex in ipairs(caps) do
+        if tex.GetParent then add(tex:GetParent()) end
+    end
+    return holders
+end
+
 function A:Apply()
     local hide = self.db.hideGryphons
     self.caps = findCaps()
-    for _, tex in ipairs(self.caps) do
-        if not tex.qolHooked then
-            tex.qolHooked = true
-            -- Whatever the game sets, put our alpha back while the option is on.
-            local function enforce(t)
-                if A.db.hideGryphons and not t.qolSetting and t:GetAlpha() ~= 0 then
-                    t.qolSetting = true
-                    t:SetAlpha(0)
-                    t.qolSetting = nil
-                end
-            end
-            hooksecurefunc(tex, "SetAlpha", enforce)
-            hooksecurefunc(tex, "Show", enforce)
-        end
-        tex.qolSetting = true
-        tex:SetAlpha(hide and 0 or 1)
-        tex.qolSetting = nil
-    end
+    self.holders = findHolders(self.caps)
+    for _, tex in ipairs(self.caps) do setHidden(tex, hide, true) end
+    for _, frame in ipairs(self.holders) do setHidden(frame, hide, false) end
 end
 
 function A:SetHideGryphons(on)
@@ -152,7 +189,15 @@ end
 function A:PrintDebug()
     local caps = findCaps()
     QoL:Print(("gryphons hidden: %s, end caps found: %d"):format(tostring(self.db.hideGryphons), #caps))
-    for _, tex in ipairs(caps) do print("  cap: " .. describe(tex)) end
+    for _, tex in ipairs(caps) do
+        local okA, alpha = pcall(tex.GetAlpha, tex)
+        local okS, shown = pcall(tex.IsShown, tex)
+        print(("  cap: %s alpha=%s shown=%s"):format(describe(tex), okA and tostring(alpha) or "?",
+            okS and tostring(shown) or "?"))
+    end
+    for _, frame in ipairs(findHolders(caps)) do
+        print("  holder: " .. tostring(safeString(frame.GetDebugName, frame) or "?"))
+    end
     local names = {}
     for _, frame in ipairs(barFrames()) do
         table.insert(names, safeString(frame.GetName, frame) or "?")
