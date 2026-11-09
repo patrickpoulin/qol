@@ -184,3 +184,5 @@ events:SetScript("OnEvent", function(_, event, unit)
     end
     F:UpdateFishingMode()
 end)
+
+QoL:GuardScripts("One-key fishing", events, "OnEvent")

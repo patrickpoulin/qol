@@ -2,6 +2,7 @@
 -- your own characters, the guild roster, online friends, and your target or mouseover.
 -- Only updates people who are already contacts; never adds anyone.
 local _, ns = ...
+local QoL = ns.QoL
 local M = ns.Mail
 
 -- Newer clients can hide unit details behind "secret" values; skip those.
@@ -95,3 +96,5 @@ function M:RequestGuildRoster()
         GuildRoster()
     end
 end
+
+QoL:GuardScripts("Mail contacts", events, "OnEvent")

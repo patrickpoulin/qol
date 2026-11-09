@@ -32,6 +32,38 @@ QoL.ApplyDefaults = applyDefaults
 --   OnLoad(self)          saved data is ready (self.db, self.charDB)
 --   OnEnable(self)        player is in the world; build UI here
 --   OnSlash(self, args)   handles "/qol <key> <args>"
+-- True for the "secret" values newer clients hand out in restricted
+-- situations (raids, combat). Comparing or doing maths on one is an error.
+function QoL.IsSecret(v)
+    local check = _G.issecretvalue
+    return check ~= nil and v ~= nil and check(v) and true or false
+end
+
+-- Wraps a handler that runs often (events, OnUpdate, hooks). The first error
+-- is printed once and switches the handler off until /reload, so one bad
+-- value can't flood the game with errors (which makes it offer to turn
+-- addons off).
+function QoL:Guard(label, fn)
+    local broken = false
+    return function(...)
+        if broken then return end
+        local ok, err = pcall(fn, ...)
+        if not ok then
+            broken = true
+            QoL:Print(("|cffff5555%s hit an error and is paused until /reload:|r %s"):format(label, tostring(err)))
+        end
+    end
+end
+
+-- Guard scripts a frame already has, e.g. QoL:GuardScripts("Pins", f, "OnUpdate").
+function QoL:GuardScripts(label, frame, ...)
+    for i = 1, select("#", ...) do
+        local name = select(i, ...)
+        local fn = frame:GetScript(name)
+        if fn then frame:SetScript(name, QoL:Guard(label, fn)) end
+    end
+end
+
 function QoL:RegisterModule(key, module)
     assert(not self.modules[key], "QoL module already registered: " .. key)
     module.key = key

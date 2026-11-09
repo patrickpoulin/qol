@@ -183,7 +183,7 @@ function A:OnEnable()
     -- The bar can be rebuilt after a loading screen; check again then.
     local f = CreateFrame("Frame")
     f:RegisterEvent("PLAYER_ENTERING_WORLD")
-    f:SetScript("OnEvent", function() A:Apply() end)
+    f:SetScript("OnEvent", QoL:Guard("Action bar", function() A:Apply() end))
 end
 
 function A:PrintDebug()
