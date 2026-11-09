@@ -19,6 +19,9 @@ local FISHING_CVARS = {
     { "Sound_SFXVolume", "1" },
     { "Sound_EnableMusic", "0" },
     { "Sound_EnableAmbience", "0" },
+    { "Sound_MasterVolume", "1" },
+    { "Sound_EnableDialog", "0" }, -- NPC chatter
+    { "Sound_EnableSoundWhenGameIsInBG", "1" }, -- hear the splash while alt-tabbed
 }
 
 local function fishingSpellName()
@@ -83,13 +86,10 @@ end
 -- pole on doesn't save the fishing values as yours).
 local function applyFishingCVars()
     if not F.db.fishingSettings then return end
-    local saved = F.charDB.savedCVars
-    if not saved then
-        saved = {}
-        for _, cvar in ipairs(FISHING_CVARS) do
-            saved[cvar[1]] = GetCVar(cvar[1])
-        end
-        F.charDB.savedCVars = saved
+    local saved = F.charDB.savedCVars or {}
+    F.charDB.savedCVars = saved
+    for _, cvar in ipairs(FISHING_CVARS) do
+        if saved[cvar[1]] == nil then saved[cvar[1]] = GetCVar(cvar[1]) end
     end
     for _, cvar in ipairs(FISHING_CVARS) do
         if GetCVar(cvar[1]) ~= nil then SetCVar(cvar[1], cvar[2]) end
