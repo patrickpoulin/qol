@@ -9,7 +9,7 @@ Quality-of-life features for WoW Forever, under one slash command: `/qol`.
 An on-screen to-do list.
 
 - Drag the title bar to move the window anywhere. It remembers where you put it.
-- Collapse it to a small title bar with the triangle next to the title or by double-clicking the title.
+- Collapse it to a small title bar by clicking anywhere on the title bar.
 - Resize it from the bottom-right corner.
 - Use as many tabs as you like. Click `+` to add one, double-click a tab to rename it, and right-click a tab to rename or delete it.
 - Click a task to edit it, tick it when it's done, or click `x` to delete it.

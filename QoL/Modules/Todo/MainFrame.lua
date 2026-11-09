@@ -118,7 +118,7 @@ function T:CreateMainFrame()
     f:SetBackdropColor(0.05, 0.05, 0.08, 0.85)
     f:SetBackdropBorderColor(0.5, 0.5, 0.55, 1)
 
-    -- Title bar: drag to move, double-click to collapse.
+    -- Title bar: drag to move, click to collapse or expand.
     local bar = CreateFrame("Button", nil, f)
     bar:SetPoint("TOPLEFT", 4, -3)
     bar:SetPoint("TOPRIGHT", -4, -3)
@@ -131,8 +131,12 @@ function T:CreateMainFrame()
     bar:SetScript("OnDragStop", function()
         f:StopMovingOrSizing()
         self:SavePosition()
+        bar.draggedAt = GetTime()
     end)
-    bar:SetScript("OnDoubleClick", function()
+    -- Click anywhere on the header to collapse or expand. A drag also ends
+    -- with a click, so ignore the click that finishes a move.
+    bar:SetScript("OnClick", function()
+        if bar.draggedAt and GetTime() - bar.draggedAt < 0.3 then return end
         self:SetCollapsed(not self.charDB.collapsed)
     end)
 
