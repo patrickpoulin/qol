@@ -178,6 +178,8 @@ end
 
 function M:Refresh()
     if self.RefreshPanel then self:RefreshPanel() end
+    -- The Contacts tab in the QoL window shows the same book.
+    if ns.Todo and ns.Todo.RefreshContacts then ns.Todo:RefreshContacts() end
 end
 
 ----------------------------------------------------------------------

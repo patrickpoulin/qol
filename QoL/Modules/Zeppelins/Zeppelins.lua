@@ -397,6 +397,7 @@ function Z:HookWorldMap()
         end
     end)
     watcher:SetScript("OnHide", function() wipe(last) end)
+    QoL:GuardScripts("Zeppelin pins", watcher, "OnUpdate")
     self.worldMapWatcher = watcher
 end
 
@@ -483,6 +484,7 @@ function Z:OnEnable()
             elapsed = 0
             Z:UpdateMinimap()
         end)
+        QoL:GuardScripts("Zeppelin pins", driver, "OnUpdate")
         self.minimapDriver = driver
     end
     self:HookWorldMap()

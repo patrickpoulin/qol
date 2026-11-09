@@ -54,8 +54,12 @@ end
 function T:GetThreat(unit)
     if _G.UnitDetailedThreatSituation then
         local ok, tanking, status, scaled, raw, value = pcall(_G.UnitDetailedThreatSituation, "player", unit)
-        if ok and (status or scaled) then
-            return tanking, status, scaled, raw, value, "client"
+        -- In raids the client can return secret values, which can't be
+        -- tested or used in maths. Treat those as "no threat to show".
+        if ok and not (QoL.IsSecret(tanking) or QoL.IsSecret(status) or QoL.IsSecret(scaled) or QoL.IsSecret(raw)) then
+            if status or scaled then
+                return tanking, status, scaled, raw, value, "client"
+            end
         end
     end
     local lib = getThreatLib()
@@ -94,26 +98,47 @@ local function anchorFrame()
     return _G.TargetFrame or UIParent
 end
 
+-- A region's scale relative to UIParent, to turn its coordinates into ours.
+local function relScale(region)
+    return region:GetEffectiveScale() / UIParent:GetEffectiveScale()
+end
+
+-- The number lives on UIParent, never anchored to the target frame: a frame
+-- anchored to a protected frame can't be resized or moved in combat, and the
+-- game blocks the addon (and warns) every time it tries. Its position is
+-- worked out from the target frame, and only out of combat.
 function T:ApplyPosition()
     local f, anchor = self.frame, anchorFrame()
-    f:ClearAllPoints()
-    -- The box's right edge is the fixed point, so it grows to the left.
-    local bar = _G.TargetFrameHealthBar or (anchor ~= UIParent and anchor.healthbar)
-    if self.db.rightPoint then
-        f:SetPoint("RIGHT", anchor, "CENTER", self.db.rightPoint[1], self.db.rightPoint[2])
-    elseif anchor == UIParent then
-        f:SetPoint("TOPRIGHT", UIParent, "TOP", 32, -120)
-    elseif bar then
-        -- Right edge of the health bar, just above the target's name.
-        f:SetPoint("BOTTOMRIGHT", bar, "TOPRIGHT", 0, 22)
-    else
-        f:SetPoint("BOTTOMRIGHT", anchor, "TOP", 8, -22)
+    if InCombatLockdown() then
+        self.positionPending = true
+        return
     end
+    self.positionPending = nil
+    f:ClearAllPoints()
+    local ax, ay = anchor:GetCenter()
+    if anchor == UIParent or not ax then
+        f:SetPoint("TOPRIGHT", UIParent, "TOP", 32, -120)
+        self.positioned = anchor == UIParent
+        return
+    end
+    local s = relScale(anchor)
+    ax, ay = ax * s, ay * s
+    -- The box's right edge is the fixed point, so it grows to the left.
+    local bar = _G.TargetFrameHealthBar or anchor.healthbar
+    if self.db.rightPoint then
+        f:SetPoint("RIGHT", UIParent, "BOTTOMLEFT", ax + self.db.rightPoint[1] * s, ay + self.db.rightPoint[2] * s)
+    elseif bar and bar:GetRight() then
+        -- Right edge of the health bar, just above the target's name.
+        local bs = relScale(bar)
+        f:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMLEFT", bar:GetRight() * bs, bar:GetTop() * bs + 22)
+    else
+        f:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMLEFT", ax + 8 * s, (anchor:GetTop() or ay) * s - 22)
+    end
+    self.positioned = true
 end
 
 function T:CreateFrame()
-    local anchor = anchorFrame()
-    local f = CreateFrame("Frame", "QoLThreatFrame", anchor)
+    local f = CreateFrame("Frame", "QoLThreatFrame", UIParent)
     f:SetSize(64, 18)
     f:SetFrameStrata("HIGH")
     f:SetClampedToScreen(true)
@@ -139,8 +164,11 @@ function T:CreateFrame()
         local a = anchorFrame()
         local fx, fy = frame:GetRight(), select(2, frame:GetCenter())
         local ax, ay = a:GetCenter()
-        -- Both centres are in this frame's scale when it is parented to the anchor.
-        T.db.rightPoint = { math.floor(fx - ax + 0.5), math.floor(fy - ay + 0.5) }
+        if a ~= UIParent and ax then
+            -- Stored in the target frame's units, from its centre.
+            local s = relScale(a)
+            T.db.rightPoint = { math.floor((fx - ax * s) / s + 0.5), math.floor((fy - ay * s) / s + 0.5) }
+        end
         T:ApplyPosition()
     end)
 
@@ -153,7 +181,8 @@ local function getTargetPlate()
     local np = _G.C_NamePlate
     if not (np and np.GetNamePlateForUnit) then return end
     local ok, plate = pcall(np.GetNamePlateForUnit, "target")
-    if ok then return plate end
+    -- Some nameplates in instances are off limits to addons.
+    if ok and plate and not (plate.IsForbidden and plate:IsForbidden()) then return plate end
 end
 
 function T:CreatePlateFrame()
@@ -220,6 +249,7 @@ end
 function T:Update()
     local f, pf = self.frame, self.plateFrame
     if not f then return end
+    if not self.positioned or self.positionPending then self:ApplyPosition() end
     local text, r, g, b
     if self.db.enabled or self.db.nameplate then
         text, r, g, b = self:GetDisplay()
@@ -292,19 +322,20 @@ function T:OnEnable()
         -- Unknown events error on some clients; skip them and rely on the timer.
         self.events[event] = pcall(driver.RegisterEvent, driver, event)
     end
-    driver:SetScript("OnEvent", function() T:Update() end)
+    local update = QoL:Guard("Threat", function() T:Update() end)
+    driver:SetScript("OnEvent", update)
     local elapsed = 0
     driver:SetScript("OnUpdate", function(_, dt)
         elapsed = elapsed + dt
         if elapsed < UPDATE_INTERVAL then return end
         elapsed = 0
-        if (T.db.enabled or T.db.nameplate) and UnitExists("target") then T:Update() end
+        if (T.db.enabled or T.db.nameplate) and UnitExists("target") then update() end
     end)
 
     -- LibThreatClassic2 only tracks threat while someone listens to it.
     local lib = getThreatLib()
     if lib and lib.RegisterCallback then
-        pcall(lib.RegisterCallback, T, "ThreatUpdated", function() T:Update() end)
+        pcall(lib.RegisterCallback, T, "ThreatUpdated", update)
     end
 end
 

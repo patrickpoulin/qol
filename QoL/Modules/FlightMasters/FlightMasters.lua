@@ -310,6 +310,7 @@ function F:HookWorldMap()
         end
     end)
     watcher:SetScript("OnHide", function() wipe(last) end)
+    QoL:GuardScripts("Flight master pins", watcher, "OnUpdate")
     self.worldMapWatcher = watcher
 end
 
@@ -394,6 +395,7 @@ function F:OnEnable()
             elapsed = 0
             F:UpdateMinimap()
         end)
+        QoL:GuardScripts("Flight master pins", driver, "OnUpdate")
         self.minimapDriver = driver
     end
     self:HookWorldMap()
