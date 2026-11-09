@@ -101,6 +101,12 @@ function T:SetLocked(locked)
     self.frame.grip:SetShown(not locked and not self.charDB.collapsed)
 end
 
+function T:SetBackgroundAlpha(alpha)
+    alpha = math.max(0, math.min(1, alpha))
+    self.db.bgAlpha = alpha
+    if self.frame then self.frame:SetBackdropColor(0.05, 0.05, 0.08, alpha) end
+end
+
 function T:UpdateTitle()
     self.frame.title:SetText("QoL")
 end
@@ -115,10 +121,10 @@ function T:CreateMainFrame()
     f:SetResizable(true)
     f:SetResizeBounds(MIN_W, MIN_H, MAX_W, MAX_H)
     f:SetBackdrop(BACKDROP)
-    f:SetBackdropColor(0.05, 0.05, 0.08, 0.85)
+    f:SetBackdropColor(0.05, 0.05, 0.08, self.db.bgAlpha or 0.85)
     f:SetBackdropBorderColor(0.5, 0.5, 0.55, 1)
 
-    -- Title bar: drag to move, click to collapse or expand.
+    -- Title bar: click to collapse or expand, drag to move.
     local bar = CreateFrame("Button", nil, f)
     bar:SetPoint("TOPLEFT", 4, -3)
     bar:SetPoint("TOPRIGHT", -4, -3)
@@ -126,17 +132,20 @@ function T:CreateMainFrame()
     bar:RegisterForDrag("LeftButton")
     bar:RegisterForClicks("LeftButtonUp")
     bar:SetScript("OnDragStart", function()
+        bar.dragged = true
         if not self.charDB.locked then f:StartMoving() end
     end)
     bar:SetScript("OnDragStop", function()
         f:StopMovingOrSizing()
         self:SavePosition()
-        bar.draggedAt = GetTime()
     end)
-    -- Click anywhere on the header to collapse or expand. A drag also ends
-    -- with a click, so ignore the click that finishes a move.
+    bar:SetScript("OnMouseDown", function() bar.dragged = false end)
     bar:SetScript("OnClick", function()
-        if bar.draggedAt and GetTime() - bar.draggedAt < 0.3 then return end
+        -- Releasing the mouse after a drag also counts as a click; ignore it.
+        if bar.dragged then
+            bar.dragged = false
+            return
+        end
         self:SetCollapsed(not self.charDB.collapsed)
     end)
 

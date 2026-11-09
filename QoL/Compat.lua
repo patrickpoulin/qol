@@ -32,7 +32,23 @@ end
 -- template, and plain mouse-wheel scrolling where it doesn't.
 function QoL.CreateScrollFrame(parent)
     local ok, scroll = pcall(CreateFrame, "ScrollFrame", nil, parent, "UIPanelScrollFrameTemplate")
-    if ok and scroll then return scroll end
+    if ok and scroll then
+        -- Only show the scroll bar when there is something to scroll.
+        local bar = scroll.ScrollBar
+        if bar then
+            scroll.scrollBarHideable = true
+            local function update(frame)
+                local range = frame:GetVerticalScrollRange() or 0
+                bar:SetShown(range > 0.5)
+                if range <= 0.5 and frame:GetVerticalScroll() ~= 0 then frame:SetVerticalScroll(0) end
+            end
+            scroll:HookScript("OnScrollRangeChanged", update)
+            scroll:HookScript("OnSizeChanged", update)
+            scroll:HookScript("OnShow", update)
+            update(scroll)
+        end
+        return scroll
+    end
 
     scroll = CreateFrame("ScrollFrame", nil, parent)
     scroll:EnableMouseWheel(true)
@@ -49,3 +65,21 @@ function QoL.GetPopupEditBox(popup)
     if popup.GetEditBox then return popup:GetEditBox() end
     return popup.EditBox or popup.editBox
 end
+
+-- Bags and items. Newer clients moved these into C_Container / C_Item.
+local C_Container, C_Item = _G.C_Container, _G.C_Item
+
+QoL.GetContainerNumSlots = (C_Container and C_Container.GetContainerNumSlots) or _G.GetContainerNumSlots
+QoL.GetContainerItemLink = (C_Container and C_Container.GetContainerItemLink) or _G.GetContainerItemLink
+QoL.GetContainerNumFreeSlots = (C_Container and C_Container.GetContainerNumFreeSlots) or _G.GetContainerNumFreeSlots
+QoL.PickupContainerItem = (C_Container and C_Container.PickupContainerItem) or _G.PickupContainerItem
+QoL.GetItemInfoInstant = (C_Item and C_Item.GetItemInfoInstant) or _G.GetItemInfoInstant
+QoL.GetItemCount = (C_Item and C_Item.GetItemCount) or _G.GetItemCount
+
+-- Item name, or nil while the client is still loading it.
+function QoL.GetItemName(item)
+    local getInfo = (C_Item and C_Item.GetItemInfo) or _G.GetItemInfo
+    return (getInfo(item))
+end
+
+QoL.NUM_BAGS = _G.NUM_BAG_SLOTS or 4 -- backpack is bag 0, then bags 1..NUM_BAGS
