@@ -175,6 +175,25 @@ A **Zone Levels** button in the top-right corner of the world map opens a list o
 - Zones new in WoW Forever have a blue `*`. Shen'dralas and Mount Hyjal levels aren't confirmed yet.
 - `/qol zones` opens the map with the list showing.
 
+### Mail address book (`/qol mail`)
+
+A **Contacts** panel beside the mail window, shown on the Send Mail tab.
+
+- Click a contact to put their name in the To field. The cursor moves to Subject.
+- Click **+ Add** to save someone. It starts with the name in the To field, or your target.
+- Right-click a contact to edit or remove it. Each contact has a name, class, level and a note.
+- Search filters by name or note. Hover a contact for the full note.
+- Only people you add are ever in the book. Once someone is in it, their class and level update by themselves when the game sees them: your own characters when you log in on them, guildmates from the guild roster, online friends, and anyone you target or mouse over.
+- The book is shared by all your characters. Each character can turn the panel on or off.
+
+| Command | What it does |
+| --- | --- |
+| `/qol mail` | List your contacts |
+| `/qol mail add <name>` | Add a contact |
+| `/qol mail remove <name>` | Remove a contact |
+| `/qol mail note <name> <text>` | Set a contact's note |
+| `/qol mail show` / `hide` | Turn the mailbox panel on or off |
+
 ## Install
 
 1. With WowUp: Get Addons, Install from URL, `https://github.com/patrickpoulin/qol`. Or by hand: copy the `QoL` folder into `World of Warcraft/_forever_/Interface/AddOns/`.

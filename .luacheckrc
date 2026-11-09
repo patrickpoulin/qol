@@ -29,4 +29,12 @@ read_globals = {
     "strjoin", "tostringall",
     -- Global strings
     "ACCEPT", "CANCEL", "YES", "NO",
+    -- Mail module
+    "SAVE", "UISpecialFrames", "Ambiguate", "issecretvalue",
+    "MailFrame", "SendMailFrame", "SendMailNameEditBox", "SendMailSubjectEditBox",
+    "CLASS_SORT_ORDER", "LOCALIZED_CLASS_NAMES_MALE", "LOCALIZED_CLASS_NAMES_FEMALE",
+    "RAID_CLASS_COLORS", "C_ClassColor",
+    "UnitExists", "UnitIsPlayer", "UnitIsUnit", "UnitName", "GetUnitName", "UnitClass", "UnitLevel",
+    "IsInGuild", "GuildRoster", "C_GuildInfo", "GetNumGuildMembers", "GetGuildRosterInfo",
+    "C_FriendList", "GetNumFriends", "GetFriendInfo",
 }
