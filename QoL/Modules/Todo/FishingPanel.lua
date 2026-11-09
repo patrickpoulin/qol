@@ -12,7 +12,7 @@ local ROW_HEIGHT, ICON_SIZE = 22, 18
 local LURE_TOP = 124 -- y offset of the first lure row
 
 table.insert(T.referenceTabs, {
-    id = "ref:fishing", name = "Fishing", reference = true, panel = true, tasks = {},
+    id = "ref:fishing", name = "Fishing", reference = true, panel = "fishing", tasks = {},
 })
 
 local stash = CreateFrame("Frame", nil, UIParent)

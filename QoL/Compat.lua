@@ -32,7 +32,23 @@ end
 -- template, and plain mouse-wheel scrolling where it doesn't.
 function QoL.CreateScrollFrame(parent)
     local ok, scroll = pcall(CreateFrame, "ScrollFrame", nil, parent, "UIPanelScrollFrameTemplate")
-    if ok and scroll then return scroll end
+    if ok and scroll then
+        -- Only show the scroll bar when there is something to scroll.
+        local bar = scroll.ScrollBar
+        if bar then
+            scroll.scrollBarHideable = true
+            local function update(frame)
+                local range = frame:GetVerticalScrollRange() or 0
+                bar:SetShown(range > 0.5)
+                if range <= 0.5 and frame:GetVerticalScroll() ~= 0 then frame:SetVerticalScroll(0) end
+            end
+            scroll:HookScript("OnScrollRangeChanged", update)
+            scroll:HookScript("OnSizeChanged", update)
+            scroll:HookScript("OnShow", update)
+            update(scroll)
+        end
+        return scroll
+    end
 
     scroll = CreateFrame("ScrollFrame", nil, parent)
     scroll:EnableMouseWheel(true)

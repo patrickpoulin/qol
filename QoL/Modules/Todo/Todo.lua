@@ -8,6 +8,7 @@ local T = QoL:RegisterModule("todo", {
     defaults = {
         nextId = 1,
         tabs = {},
+        bgAlpha = 0.85, -- window background opacity, 0 to 1
     },
     charDefaults = {
         activeTabId = nil,
