@@ -18,6 +18,7 @@ local HEADER_HEIGHT = 22
 local SECTION_GAP = 12     -- space above every section title but the first
 local AFTER_HEADER = 2     -- space between a section title and its first row
 local ROW_HEIGHT = 24
+local LABEL_TOP = 7        -- puts one line of small text level with the checkbox
 local ROW_GAP = 2
 local SLIDER_HEIGHT = 34
 local SLIDER_MAX_WIDTH = 300
@@ -173,6 +174,7 @@ local function createHeader(parent, helper)
     row:SetHeight(HEADER_HEIGHT)
     local label = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     label:SetPoint("BOTTOMLEFT", row, "BOTTOMLEFT", BOX_X, 5)
+    label:SetJustifyH("LEFT")
     label:SetText(helper.label)
     local line = row:CreateTexture(nil, "ARTWORK")
     line:SetColorTexture(1, 0.82, 0, 0.25)
@@ -200,6 +202,7 @@ local function createSlider(parent, helper)
     row:SetHeight(SLIDER_HEIGHT)
     local label = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     label:SetPoint("TOPLEFT", row, "TOPLEFT", 0, -4)
+    label:SetJustifyH("LEFT")
     label:SetText(helper.label)
     local value = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     value:SetPoint("TOPRIGHT", row, "TOPRIGHT", 0, -4)
@@ -248,7 +251,11 @@ local function createCheck(parent, helper)
     local check = CreateFrame("CheckButton", nil, parent, "UICheckButtonTemplate")
     check:SetSize(CHECK_SIZE, CHECK_SIZE)
     local label = check:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    label:SetPoint("LEFT", check, "RIGHT", 2, 0)
+    -- Left-justified (a sized font string centers its text by default) and
+    -- pinned to the top, so a label that wraps grows downward.
+    label:SetPoint("TOPLEFT", check, "TOPRIGHT", TEXT_X - CHECK_SIZE, -LABEL_TOP)
+    label:SetJustifyH("LEFT")
+    label:SetJustifyV("TOP")
     label:SetText(helper.label)
     check.label = label
     check:SetScript("OnClick", function(btn) helper.set(btn:GetChecked() and true or false) end)
@@ -271,30 +278,17 @@ function T:CreateHelpersPanel(parent)
     scroll:Hide()
 
     scroll.checks = {}
-    local y = 0
     for i, helper in ipairs(HELPERS) do
         local item
-        local x = helper.indent and INDENT or 0
         if helper.kind == "header" then
-            if i > 1 then y = y + SECTION_GAP end
             item = createHeader(child, helper)
-            item:SetPoint("TOPLEFT", child, "TOPLEFT", 0, -y)
-            item:SetPoint("RIGHT", child, "RIGHT", 0, 0)
-            y = y + HEADER_HEIGHT + AFTER_HEADER
         elseif helper.kind == "slider" then
-            -- Sliders sit in the text column, so their label lines up with
-            -- the checkbox labels at the same level.
             item = createSlider(child, helper)
-            item:SetPoint("TOPLEFT", child, "TOPLEFT", x + TEXT_X, -y)
-            y = y + SLIDER_HEIGHT + ROW_GAP
         else
             item = createCheck(child, helper)
-            item:SetPoint("TOPLEFT", child, "TOPLEFT", x, -y)
-            y = y + ROW_HEIGHT + ROW_GAP
         end
         scroll.checks[i] = item
     end
-    scroll.contentHeight = y
     self.helpersPanel = scroll
 end
 
@@ -319,14 +313,30 @@ function T:LayoutHelpers()
     if width <= 0 then return end
     local child = panel:GetScrollChild()
     child:SetWidth(width)
-    child:SetHeight(panel.contentHeight + 4)
-    for _, item in ipairs(panel.checks) do
+    -- Stack the rows top to bottom. Done here rather than at creation so a
+    -- checkbox label that wraps on a narrow window gets a taller row.
+    local y = 0
+    for i, item in ipairs(panel.checks) do
         local helper = item.helper
         local x = helper.indent and INDENT or 0
-        if helper.kind == "slider" then
+        item:ClearAllPoints()
+        if helper.kind == "header" then
+            if i > 1 then y = y + SECTION_GAP end
+            item:SetPoint("TOPLEFT", child, "TOPLEFT", 0, -y)
+            item:SetPoint("RIGHT", child, "RIGHT", 0, 0)
+            y = y + HEADER_HEIGHT + AFTER_HEADER
+        elseif helper.kind == "slider" then
+            -- Sliders sit in the text column, so their label lines up with
+            -- the checkbox labels at the same level.
+            item:SetPoint("TOPLEFT", child, "TOPLEFT", x + TEXT_X, -y)
             item:SetWidth(math.max(1, math.min(SLIDER_MAX_WIDTH, width - x - TEXT_X - 8)))
-        elseif not helper.kind then
-            item.label:SetWidth(width - x - TEXT_X - 4)
+            y = y + SLIDER_HEIGHT + ROW_GAP
+        else
+            item:SetPoint("TOPLEFT", child, "TOPLEFT", x, -y)
+            item.label:SetWidth(math.max(1, width - x - TEXT_X - 4))
+            local textHeight = item.label:GetStringHeight() or 0
+            y = y + math.max(ROW_HEIGHT, LABEL_TOP + textHeight + LABEL_TOP) + ROW_GAP
         end
     end
+    child:SetHeight(y + 4)
 end
