@@ -1,6 +1,7 @@
 -- Built-in reference tabs: read-only text that ships with the addon.
 -- They sit after your own tabs and can't be renamed, deleted or given tasks.
 local _, ns = ...
+local QoL = ns.QoL
 local T = ns.Todo
 
 local SCROLLBAR_SPACE = 24
@@ -9,18 +10,18 @@ local function h(text) return "|cffffd100" .. text .. "|r" end
 local function p(name) return "|cff88ccff" .. name .. "|r" end
 
 local PROFESSIONS = table.concat({
-    h("Camp objects"),
-    p("First Aid") .. " - First Aid Kit: Stamina",
-    p("Fishing") .. " - Fishing Bowl: +8% all stats",
+    h("Camp Objects"),
     p("Alchemy") .. " - Mana Well: mana every 5 sec",
     p("Blacksmithing") .. " - Sharpening Wheel: Strength",
     p("Enchanting") .. " - Enchanted Lute: armor, stats, resistances",
+    p("Engineering") .. " - Reagent Bot: reagent vendor",
+    p("First Aid") .. " - First Aid Kit: Stamina",
+    p("Fishing") .. " - Fishing Bowl: +8% all stats",
     p("Herbalism") .. " - Incense Candle: Intellect",
     p("Leatherworking") .. " - Camp Tent: rested XP (5% of a level)",
+    p("Mining") .. " - Lodestone: Melee AP",
     p("Skinning") .. " - Camp Chair: +2% crit",
     p("Tailoring") .. " - Faction Banner: Spirit",
-    p("Engineering") .. " - Reagent Bot: reagent vendor",
-    p("Mining") .. " - Lodestone: Melee AP",
     "",
     h("Campfires"),
     "Cooking 1 unlocks a Basic Campfire.",
@@ -30,7 +31,7 @@ local PROFESSIONS = table.concat({
 }, "\n")
 
 T.referenceTabs = {
-    { id = "ref:professions", name = "Professions", text = PROFESSIONS, reference = true, tasks = {} },
+    { id = "ref:professions", name = "Campfires", text = PROFESSIONS, reference = true, tasks = {} },
 }
 
 function T:GetReferenceTab(id)
@@ -40,7 +41,7 @@ function T:GetReferenceTab(id)
 end
 
 function T:CreateReferencePanel(parent)
-    local scroll = CreateFrame("ScrollFrame", nil, parent, "UIPanelScrollFrameTemplate")
+    local scroll = QoL.CreateScrollFrame(parent)
     scroll:SetPoint("TOPLEFT", self.tabStrip, "BOTTOMLEFT", 0, -6)
     scroll:SetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT", -SCROLLBAR_SPACE, 4)
     local child = CreateFrame("Frame", nil, scroll)

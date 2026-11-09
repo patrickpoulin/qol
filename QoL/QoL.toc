@@ -2,7 +2,7 @@
 ## Title: QoL
 ## Notes: Quality-of-life features. Type /qol for help.
 ## Author: Patrick
-## Version: 0.14.0
+## Version: 0.14.2
 ## SavedVariables: QoLDB
 ## SavedVariablesPerCharacter: QoLCharDB
 
@@ -13,10 +13,26 @@ Slash.lua
 Modules/Todo/Todo.lua
 Modules/Todo/Data.lua
 Modules/Todo/Reference.lua
+Modules/Todo/FishingPanel.lua
+Modules/Todo/HelpersPanel.lua
 Modules/Todo/Dialogs.lua
 Modules/Todo/MainFrame.lua
 Modules/Todo/Tabs.lua
 Modules/Todo/TaskList.lua
+
+Modules/Fishing/Fishing.lua
+Modules/Fishing/OneKey.lua
+
+Modules/Threat/Threat.lua
+
+Modules/PetHealth/PetHealth.lua
+
+Modules/Zeppelins/Zeppelins.lua
+Modules/FlightMasters/FlightMasters.lua
+
+Modules/ZoneLevels/ZoneLevels.lua
+
+Modules/ActionBar/ActionBar.lua
 
 Modules/Mail/Mail.lua
 Modules/Mail/Sync.lua
