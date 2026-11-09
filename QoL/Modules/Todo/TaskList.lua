@@ -127,6 +127,7 @@ function T:CreateTaskList(parent)
     self:CreateReferencePanel(parent)
     self:CreateFishingPanel(parent)
     self:CreateHelpersPanel(parent)
+    self:CreateContactsPanel(parent)
 end
 
 function T:RefreshTasks()
@@ -138,6 +139,7 @@ function T:RefreshTasks()
     self.addBox:SetShown(not tab.reference)
     self.fishPanel:SetShown(tab.panel == "fishing")
     self.helpersPanel:SetShown(tab.panel == "helpers")
+    self.contactsPanel:SetShown(tab.panel == "contacts")
     self.refPanel:SetShown(tab.reference and not tab.panel)
     if tab.reference then
         self.emptyText:Hide()
@@ -146,6 +148,8 @@ function T:RefreshTasks()
             self:ShowFishing()
         elseif tab.panel == "helpers" then
             self:ShowHelpers()
+        elseif tab.panel == "contacts" then
+            self:ShowContacts()
         else
             self:ShowReference(tab)
         end
@@ -180,6 +184,7 @@ function T:LayoutTasks()
     self:LayoutReference()
     self:LayoutFishing()
     self:LayoutHelpers()
+    self:LayoutContacts()
     local width = self:GetContentWidth() - SCROLLBAR_SPACE
     if not width or width <= 0 then return end
     local tab = self:GetActiveTab()
