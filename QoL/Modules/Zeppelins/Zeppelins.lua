@@ -52,6 +52,9 @@ local MAPS = {
     mulgore = { id = 1412, name = "Mulgore" },
     alterac = { id = 1416, name = "Alterac Mountains" },
     barrens = { id = 1413, name = "The Barrens" },
+    tanaris = { id = 1446, name = "Tanaris" },
+    -- A Forever-only zone: no known map ID, so it is found by name.
+    riverglades = { name = "The Riverglades", alt = { "Riverglades" } },
     wetlands = { id = 1437, name = "Wetlands" },
     teldrassil = { id = 1438, name = "Teldrassil" },
     darkshore = { id = 1439, name = "Darkshore" },
@@ -161,6 +164,23 @@ Z.towers = {
             { x = 43.3, y = 42.8, to = "Feathermoon Stronghold", toWhere = "Feralas", kind = "Ferry" },
         },
     },
+    -- Forever's new boat, for both factions. No guide publishes the dock
+    -- spots yet: Steamwheedle Port is placed at the port in northeast
+    -- Tanaris, Powderfuse Port beside its Black Market (about 78, 52).
+    {
+        name = "Steamwheedle Port dock", map = "tanaris", boat = true, approx = true,
+        where = "Steamwheedle Port, Tanaris",
+        docks = {
+            { x = 67.0, y = 23.0, to = "Powderfuse Port", toWhere = "The Riverglades", kind = "Boat" },
+        },
+    },
+    {
+        name = "Powderfuse Port dock", map = "riverglades", boat = true, approx = true,
+        where = "Powderfuse Port, The Riverglades",
+        docks = {
+            { x = 78.0, y = 52.0, to = "Steamwheedle Port", toWhere = "Tanaris", kind = "Boat" },
+        },
+    },
 }
 
 -- Docks only one faction can use are hidden from the other faction.
@@ -180,6 +200,7 @@ end
 ---------------------------------------------------------------------------
 
 local function mapName(id)
+    if not id then return end
     local info = C_Map and C_Map.GetMapInfo and C_Map.GetMapInfo(id)
     return info and info.name
 end
@@ -204,6 +225,7 @@ local function resolveMap(key)
         id = findMapByName(m.name) or id
     elseif not name then
         id = findMapByName(m.name)
+        for _, alt in ipairs(m.alt or {}) do id = id or findMapByName(alt) end
     end
     m.resolved = id or false
     return id

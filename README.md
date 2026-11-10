@@ -129,8 +129,10 @@ Docks only one faction can use (Horde zeppelins and skyboat, Alliance boats and 
 | Rut'theran Village (Teldrassil 55.0, 96.5, approximate) | Auberdine |
 | Feathermoon Stronghold (Feralas 31.0, 39.9, approximate) | The Forgotten Coast |
 | The Forgotten Coast (Feralas 43.3, 42.8, approximate) | Feathermoon Stronghold |
+| Steamwheedle Port (Tanaris 67.0, 23.0, approximate) | Powderfuse Port, The Riverglades (Forever, both factions) |
+| Powderfuse Port (The Riverglades 78.0, 52.0, approximate) | Steamwheedle Port, Tanaris (Forever, both factions) |
 
-Forever's new docks (Stormwind Harbor to Auberdine, Southshore, Steamwheedle Port and Powderfuse Port) have no pins yet because their positions aren't known.
+Forever's Stormwind Harbor and Southshore docks have no pins yet because their positions aren't known.
 
 - On zone maps each platform has its own pin. On the continent map a tower has one pin that lists both platforms.
 - Minimap pins show when a dock is within minimap range, and follow a rotating minimap.
