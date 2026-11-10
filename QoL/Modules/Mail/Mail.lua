@@ -29,16 +29,24 @@ local MAX_NAME, MAX_NOTE = 64, 255
 -- Names and classes
 ----------------------------------------------------------------------
 
--- Tidy a typed name: trim, capitalise the first letter, keep any "-Realm".
+-- Squash runs of spaces to one and trim the ends.
+local function tidySpaces(name)
+    return ((name or ""):gsub("%s+", " "):match("^ ?(.-) ?$"))
+end
+
+-- Tidy a typed name: trim, capitalise each word, keep any "-Realm".
+-- Forever characters have two names ("Adther Forever"), so spaces are kept.
 function M.CleanName(name)
-    name = (name or ""):match("^%s*(.-)%s*$"):gsub("%s+", "")
+    name = tidySpaces(name)
     if name == "" then return nil end
-    return (name:gsub("^%l", string.upper)):sub(1, MAX_NAME)
+    name = name:gsub("^%l", string.upper):gsub(" %l", string.upper)
+    return (name:sub(1, MAX_NAME))
 end
 
 -- Lookup key: lower case, realm dropped when it is the player's own realm.
 function M.KeyFor(name)
-    if not name or name == "" then return nil end
+    name = tidySpaces(name)
+    if name == "" then return nil end
     if Ambiguate then
         local ok, short = pcall(Ambiguate, name, "none")
         if ok and type(short) == "string" then name = short end
@@ -220,7 +228,15 @@ function M:OnSlash(args)
         end
         QoL:Print("removed " .. rest .. ".")
     elseif cmd == "note" then
+        -- Names can contain a space, so match the longest saved name that starts the text.
         local name, text = rest:match("^(%S+)%s*(.-)$")
+        local lowered = rest:lower()
+        for _, c in pairs(self.db.contacts) do
+            local n = c.name:lower()
+            if (lowered == n or lowered:sub(1, #n + 1) == n .. " ") and #n >= #(name or "") then
+                name, text = c.name, rest:sub(#n + 2):match("^%s*(.-)$")
+            end
+        end
         local contact, key = self:GetContact(name)
         if not contact then
             return QoL:Print(name and ("%s isn't in your contacts."):format(name) or "usage: /qol mail note <name> <text>")

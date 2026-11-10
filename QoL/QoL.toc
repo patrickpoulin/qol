@@ -2,7 +2,7 @@
 ## Title: QoL
 ## Notes: Quality-of-life features. Type /qol for help.
 ## Author: Patrick
-## Version: 0.15.1
+## Version: 0.15.3
 ## SavedVariables: QoLDB
 ## SavedVariablesPerCharacter: QoLCharDB
 

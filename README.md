@@ -181,10 +181,10 @@ A **Contacts** panel beside the mail window, shown on the Send Mail tab.
 
 - Click a contact to put their name in the To field. The cursor moves to Subject.
 - Click **+ Add** to save someone. It starts with the name in the To field, or your target.
-- Right-click a contact to edit or remove it. Each contact has a name, class, level and a note.
+- Right-click a contact to edit or remove it. Each contact has a name, class and a note. Pick the class with one click from the coloured class buttons. Names can have two words, like Forever characters ("Adther Forever").
 - Search filters by name or note. Hover a contact for the full note.
 - Only people you add are ever in the book. Once someone is in it, their class and level update by themselves when the game sees them: your own characters when you log in on them, guildmates from the guild roster, online friends, and anyone you target or mouse over.
-- The same book is a built-in **Contacts** tab in the QoL window, so you can read and edit names and notes anywhere. Click a contact there to edit it, or to fill the To field when the Send Mail tab is open.
+- The same book is a built-in **Contacts** tab in the QoL window, so you can read and edit names and notes anywhere. Its search box is at the top and the **Add contact** button is at the bottom. Click a contact there to edit it, or to fill the To field when the Send Mail tab is open.
 - The book is shared by all your characters. Each character can turn the mailbox panel on or off.
 
 | Command | What it does |

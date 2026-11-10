@@ -8,7 +8,8 @@ local T = ns.Todo
 
 local SCROLLBAR_SPACE = 24
 local ROW_HEIGHT = 34
-local TOP_BAR = 26 -- search box and + Add button
+local TOP_BAR = 26 -- search box
+local BOTTOM_BAR = 28 -- Add contact button
 
 table.insert(T.referenceTabs, {
     id = "ref:contacts", name = "Contacts", reference = true, panel = "contacts", tasks = {},
@@ -87,10 +88,12 @@ function T:CreateContactsPanel(parent)
     panel:Hide()
     self.contactsPanel = panel
 
+    -- Adding lives at the bottom so the search box above can't be mistaken for "type a name and add".
     local add = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
-    add:SetSize(56, 20)
-    add:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -14, 0)
-    add:SetText("+ Add")
+    add:SetHeight(22)
+    add:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 6, 2)
+    add:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -6, 2)
+    add:SetText("Add contact")
     add:SetScript("OnClick", function()
         local M = mail()
         if M then M:ShowEditor(nil, M:GuessNewName()) end
@@ -99,11 +102,17 @@ function T:CreateContactsPanel(parent)
     local search = CreateFrame("EditBox", nil, panel, "InputBoxTemplate")
     search:SetHeight(20)
     search:SetPoint("TOPLEFT", panel, "TOPLEFT", 6, 0)
-    search:SetPoint("RIGHT", add, "LEFT", -8, 0)
+    search:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -8, 0)
     search:SetAutoFocus(false)
     search:SetMaxLetters(40)
+    search:SetTextInsets(14, 0, 0, 0)
+    local icon = search:CreateTexture(nil, "OVERLAY")
+    icon:SetTexture("Interface\\Common\\UI-Searchbox-Icon")
+    icon:SetSize(14, 14)
+    icon:SetPoint("LEFT", search, "LEFT", 0, -1)
+    icon:SetVertexColor(0.6, 0.6, 0.6)
     local hint = search:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
-    hint:SetPoint("LEFT", search, "LEFT", 2, 0)
+    hint:SetPoint("LEFT", icon, "RIGHT", 2, 1)
     hint:SetText("Search names and notes")
     search:SetScript("OnTextChanged", function(box)
         hint:SetShown(box:GetText() == "" and not box:HasFocus())
@@ -117,7 +126,7 @@ function T:CreateContactsPanel(parent)
 
     local scroll = QoL.CreateScrollFrame(panel)
     scroll:SetPoint("TOPLEFT", panel, "TOPLEFT", 0, -TOP_BAR)
-    scroll:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -SCROLLBAR_SPACE, 0)
+    scroll:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -SCROLLBAR_SPACE, BOTTOM_BAR)
     local child = CreateFrame("Frame", nil, scroll)
     child:SetSize(1, 1)
     scroll:SetScrollChild(child)
@@ -165,7 +174,7 @@ function T:RefreshContacts()
         panel.empty:Hide()
     else
         panel.empty:SetText(panel.search:GetText() ~= "" and "No matches."
-            or "No contacts yet. Click + Add to save someone.")
+            or "No contacts yet. Click Add contact to save someone.")
         panel.empty:Show()
     end
     self:LayoutContacts()

@@ -1,6 +1,5 @@
 -- Add/edit contact window and the remove confirmation.
 local _, ns = ...
-local QoL = ns.QoL
 local M = ns.Mail
 
 local BACKDROP = {
@@ -29,6 +28,8 @@ function M:ConfirmRemove(key)
     })
 end
 
+local CLASS_COLS, CLASS_W, CLASS_H = 3, 80, 20
+
 local function label(parent, text, anchor, y)
     local fs = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     fs:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 0, y)
@@ -36,18 +37,23 @@ local function label(parent, text, anchor, y)
     return fs
 end
 
+-- Highlight the chosen class button and dim the rest.
 local function setClass(f, token)
     f.class = token
-    local text = token and M.ClassName(token) or "Unknown"
-    f.classButton:SetText(text)
-    f.classButton:GetFontString():SetTextColor(M.ClassColor(token))
+    for _, btn in ipairs(f.classButtons) do
+        local chosen = btn.token == token
+        btn.selected:SetShown(chosen)
+        btn.text:SetAlpha((chosen or not token) and 1 or 0.45)
+    end
+    f.classText:SetText(token and M.ClassName(token) or "none picked")
+    f.classText:SetTextColor(M.ClassColor(token))
 end
 
 local function save(f)
     local contact, err = M:SaveContact({
         name = f.nameBox:GetText(),
         class = f.class,
-        level = f.levelBox:GetText(),
+        level = f.level, -- not edited here; kept from what the game last saw
         note = f.noteBox:GetText(),
     }, f.key)
     if not contact then
@@ -59,7 +65,7 @@ end
 
 local function createEditor()
     local f = CreateFrame("Frame", "QoLMailEditor", UIParent, "BackdropTemplate")
-    f:SetSize(280, 270)
+    f:SetSize(280, 1) -- height set once the class grid is built
     f:SetFrameStrata("DIALOG")
     f:SetBackdrop(BACKDROP)
     f:EnableMouse(true)
@@ -83,29 +89,40 @@ local function createEditor()
     f.nameBox:SetAutoFocus(false)
     f.nameBox:SetMaxLetters(64)
 
+    -- Every class as a coloured button: one click picks it, a second click clears it.
     local classLabel = label(f, "Class", nameLabel, -32)
-    f.classButton = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-    f.classButton:SetSize(130, 22)
-    f.classButton:SetPoint("TOPLEFT", classLabel, "BOTTOMLEFT", 0, -2)
-    f.classButton:SetScript("OnClick", function(btn)
-        local items = { { text = "Unknown", func = function() setClass(f, nil) end } }
-        for _, token in ipairs(M.ClassList()) do
-            table.insert(items, { text = M.ClassName(token), func = function() setClass(f, token) end })
-        end
-        QoL.ShowContextMenu(btn, items)
-    end)
+    f.classText = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    f.classText:SetPoint("LEFT", classLabel, "RIGHT", 6, 0)
+    f.classButtons = {}
+    local classes = M.ClassList()
+    for i, token in ipairs(classes) do
+        local btn = CreateFrame("Button", nil, f)
+        btn:SetSize(CLASS_W, CLASS_H)
+        local col, row = (i - 1) % CLASS_COLS, math.floor((i - 1) / CLASS_COLS)
+        btn:SetPoint("TOPLEFT", classLabel, "BOTTOMLEFT", col * (CLASS_W + 2), -4 - row * (CLASS_H + 2))
+        local bg = btn:CreateTexture(nil, "BACKGROUND")
+        bg:SetAllPoints()
+        bg:SetColorTexture(0, 0, 0, 0.5)
+        btn.selected = btn:CreateTexture(nil, "BORDER")
+        btn.selected:SetAllPoints()
+        local r, g, b = M.ClassColor(token)
+        btn.selected:SetColorTexture(r, g, b, 0.35)
+        btn.selected:Hide()
+        btn:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
+        btn.text = btn:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+        btn.text:SetPoint("CENTER")
+        btn.text:SetText(M.ClassName(token))
+        btn.text:SetTextColor(r, g, b)
+        btn.token = token
+        btn:SetScript("OnClick", function()
+            setClass(f, f.class ~= token and token or nil)
+        end)
+        table.insert(f.classButtons, btn)
+    end
+    local classRows = math.max(1, math.ceil(#classes / CLASS_COLS))
+    local gridHeight = classRows * (CLASS_H + 2) + 4
 
-    local levelLabel = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    levelLabel:SetPoint("LEFT", classLabel, "LEFT", 150, 0)
-    levelLabel:SetText("Level")
-    f.levelBox = CreateFrame("EditBox", nil, f, "InputBoxTemplate")
-    f.levelBox:SetSize(50, 20)
-    f.levelBox:SetPoint("TOPLEFT", levelLabel, "BOTTOMLEFT", 6, -2)
-    f.levelBox:SetAutoFocus(false)
-    f.levelBox:SetNumeric(true)
-    f.levelBox:SetMaxLetters(3)
-
-    local noteLabel = label(f, "Note", classLabel, -34)
+    local noteLabel = label(f, "Note", classLabel, -(gridHeight + 6))
     local noteBg = CreateFrame("Frame", nil, f, "BackdropTemplate")
     noteBg:SetPoint("TOPLEFT", noteLabel, "BOTTOMLEFT", 0, -4)
     noteBg:SetSize(244, 76)
@@ -143,14 +160,16 @@ local function createEditor()
     cancel:SetText(CANCEL)
     cancel:SetScript("OnClick", function() f:Hide() end)
 
-    -- Tab moves between fields; Enter in a one-line box saves.
-    local order = { f.nameBox, f.levelBox, f.noteBox }
+    -- Name, class grid, note (76), error line and buttons.
+    f:SetHeight(38 + 40 + 16 + gridHeight + 6 + 16 + 76 + 22 + 48)
+
+    -- Tab moves between fields; Enter in the name box saves.
+    local order = { f.nameBox, f.noteBox }
     for i, box in ipairs(order) do
         box:SetScript("OnTabPressed", function() order[i % #order + 1]:SetFocus() end)
         box:SetScript("OnEscapePressed", function() f:Hide() end)
     end
     f.nameBox:SetScript("OnEnterPressed", function() save(f) end)
-    f.levelBox:SetScript("OnEnterPressed", function() save(f) end)
 
     return f
 end
@@ -163,7 +182,7 @@ function M:ShowEditor(key, name)
     f.key = c and key or nil
     f.title:SetText(c and "Edit contact" or "Add contact")
     f.nameBox:SetText(c and c.name or name or "")
-    f.levelBox:SetText(c and c.level and tostring(c.level) or "")
+    f.level = c and c.level or nil
     f.noteBox:SetText(c and c.note or "")
     f.error:SetText("")
     setClass(f, c and c.class)
