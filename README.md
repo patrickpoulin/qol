@@ -38,8 +38,9 @@ A built-in **CDs** tab in the QoL window, and a small window of cooldown timers.
 - The window is sorted so you can see what's next: ready spells at the top, then spells on cooldown with the one coming back soonest first. Icons on cooldown are greyed out, and the timer turns yellow in the last 5 seconds.
 - Drag the window to move it. Drag its bottom-right corner (or use the **Icon size** slider) to make the whole box bigger or smaller.
 - Click **Lock** on the window (or tick **Lock window** on the tab) to stop it moving and let clicks go through it. Hover the window to get the **Unlock** button back.
-- **Hide ready spells** shows only spells on cooldown, so the window is a queue. **Side by side** lines the icons up in a row instead of a column.
+- **Hide ready spells** shows only spells on cooldown, so the window is a queue. **Side by side** (on by default) lines the icons up in a row, soonest on the left. Untick it to stack them in a column.
 - **Only spells with a cooldown** (on by default) keeps spells like Fireball out of the list. Ranks of one spell show once.
+- Icons are drawn with smooth scaling. The game only has spell icons at 64x64, so they get softer above that size.
 - Each character has its own spells and window.
 
 | Command | What it does |

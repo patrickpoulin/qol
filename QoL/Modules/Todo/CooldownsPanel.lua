@@ -144,6 +144,7 @@ local function createRow(parent)
     row.icon:SetSize(ICON_SIZE, ICON_SIZE)
     row.icon:SetPoint("LEFT", check, "RIGHT", 1, 0)
     row.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
+    if row.icon.SetSnapToPixelGrid then row.icon:SetSnapToPixelGrid(false) end
 
     row.cd = row:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
     row.cd:SetPoint("RIGHT", row, "RIGHT", -4, 0)
@@ -172,8 +173,8 @@ function T:CreateCooldownsPanel(parent)
             .. "Hover the window to get its Unlock button back."),
         createOption(panel, "hideReady", "Hide ready spells",
             "Only shows spells that are on cooldown, so the window is a queue of what comes back next."),
-        createOption(panel, "horizontal", "Side by side",
-            "Lines the icons up in a row instead of a column. The soonest one is still first."),
+        createOption(panel, "sideBySide", "Side by side",
+            "Lines the icons up in a row, soonest first from the left. Untick it to stack them in a column."),
     }
     panel.options[1]:SetPoint("TOPLEFT", panel, "TOPLEFT", 0, 0)
     panel.options[3]:SetPoint("TOPLEFT", panel.options[1], "BOTTOMLEFT", 0, 2)

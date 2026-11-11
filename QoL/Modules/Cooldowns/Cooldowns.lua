@@ -28,7 +28,7 @@ local C = QoL:RegisterModule("cds", {
         locked = false,
         point = nil,       -- { left, top } relative to the bottom-left of the screen
         iconSize = 36,
-        horizontal = false, -- icons side by side instead of a column
+        sideBySide = true, -- icons in a row; off stacks them in a column
         hideReady = false,
         onlyCooldowns = true, -- CDs tab lists only spells that have a cooldown
     },
@@ -39,6 +39,23 @@ local C = QoL:RegisterModule("cds", {
     },
 })
 ns.Cooldowns = C
+
+-- Icons -----------------------------------------------------------------------
+
+-- Spell icons only ship at 64x64. By default the game snaps a texture's
+-- texels to screen pixels and filters it bilinearly without mipmaps, which
+-- looks blocky when an icon is scaled. Turn snapping off so it scales smoothly.
+function C.SmoothTexture(tex)
+    if tex.SetSnapToPixelGrid then tex:SetSnapToPixelGrid(false) end
+    if tex.SetTexelSnappingBias then tex:SetTexelSnappingBias(0) end
+end
+
+-- SetTexture with trilinear (mipmapped) filtering where the client supports it.
+function C.SetSmoothTexture(tex, file)
+    if not (file and pcall(tex.SetTexture, tex, file, nil, nil, "TRILINEAR")) then
+        tex:SetTexture(file)
+    end
+end
 
 -- Spellbook ----------------------------------------------------------------
 
@@ -266,6 +283,7 @@ local function createIcon(parent)
     b.icon = b:CreateTexture(nil, "ARTWORK")
     b.icon:SetAllPoints()
     b.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93) -- trim the default border
+    C.SmoothTexture(b.icon)
 
     local ok, cd = pcall(CreateFrame, "Cooldown", nil, b, "CooldownFrameTemplate")
     if not ok or not cd then cd = CreateFrame("Cooldown", nil, b) end
@@ -430,7 +448,7 @@ function C:DragResize()
     local s = self.frame.grip.sizing
     local x, y = _G.GetCursorPosition()
     local scale = self.frame:GetEffectiveScale()
-    local delta = self.charDB.horizontal and (s.y - y) / scale or (x - s.x) / scale
+    local delta = self.charDB.sideBySide and (s.y - y) / scale or (x - s.x) / scale
     self:SetIconSize(s.size + delta)
 end
 
@@ -478,7 +496,7 @@ function C:Update()
     local slots = math.max(n, 1)
     local length = slots * size + (slots - 1) * GAP
     local w, h
-    if db.horizontal then
+    if db.sideBySide then
         w, h = PAD * 2 + length, HEADER + size + PAD
     else
         w, h = PAD * 2 + size, HEADER + length + PAD
@@ -502,7 +520,7 @@ function C:Update()
         b.placed = true
         b:SetSize(size, size)
         b:ClearAllPoints()
-        if db.horizontal then
+        if db.sideBySide then
             b:SetPoint("TOPLEFT", f, "TOPLEFT", x0 + (k - 1) * (size + GAP), -HEADER)
         else
             b:SetPoint("TOPLEFT", f, "TOPLEFT", x0, -HEADER - (k - 1) * (size + GAP))
@@ -511,7 +529,11 @@ function C:Update()
             b.fontSize = size
             b.timer:SetFont(font, math.max(8, math.floor(size * 0.42)), "OUTLINE")
         end
-        b.icon:SetTexture(b.entry.icon or spellIcon(b.entry.id))
+        local tex = b.entry.icon or spellIcon(b.entry.id)
+        if b.tex ~= tex then
+            b.tex = tex
+            C.SetSmoothTexture(b.icon, tex)
+        end
 
         local st = b.state
         if st.secret then
@@ -545,6 +567,10 @@ function C:Update()
 end
 
 -- Lifecycle and slash ----------------------------------------------------------
+
+function C:OnLoad()
+    self.charDB.horizontal = nil -- replaced by sideBySide, which defaults to on
+end
 
 function C:OnEnable()
     self:ScanSpellbook()
