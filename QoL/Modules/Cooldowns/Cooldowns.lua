@@ -340,14 +340,14 @@ function C:UpdateKeyboard()
     local want = not self.charDB.locked and f:IsShown() and f:IsMouseOver() and not InCombatLockdown()
     if f.keyboard == want then return end
     f.keyboard = want
-    if not want and not InCombatLockdown() then f:SetPropagateKeyboardInput(true) end
-    f:EnableKeyboard(want)
+    if not want and not InCombatLockdown() then pcall(f.SetPropagateKeyboardInput, f, true) end
+    pcall(f.EnableKeyboard, f, want)
 end
 
 function C:OnKeyDown(key)
     local step = NUDGE[key]
     if InCombatLockdown() then return end
-    self.frame:SetPropagateKeyboardInput(not step)
+    pcall(self.frame.SetPropagateKeyboardInput, self.frame, not step)
     if step then
         local n = IsShiftKeyDown() and 10 or 1
         self:Nudge(step[1] * n, step[2] * n)
@@ -389,7 +389,7 @@ function C:CreateWindow()
         frame:StopMovingOrSizing()
         self:SavePosition()
     end)
-    if not InCombatLockdown() then f:SetPropagateKeyboardInput(true) end
+    if not InCombatLockdown() then pcall(f.SetPropagateKeyboardInput, f, true) end
     f:SetScript("OnKeyDown", function(_, key) self:OnKeyDown(key) end)
     f:SetScript("OnEnter", function(frame)
         if self.charDB.locked then return end
@@ -603,8 +603,10 @@ function C:OnEnable()
     self:Update()
 
     local events = CreateFrame("Frame")
-    events:RegisterEvent("SPELLS_CHANGED")
-    events:RegisterEvent("LEARNED_SPELL_IN_TAB")
+    -- Not every client has every event; registering an unknown one is an error.
+    for _, event in ipairs({ "SPELLS_CHANGED", "LEARNED_SPELL_IN_TAB", "LEARNED_SPELL_IN_SKILL_LINE" }) do
+        pcall(events.RegisterEvent, events, event)
+    end
     events:SetScript("OnEvent", QoL:Guard("Cooldowns", function()
         self:ScanSpellbook()
         self:Changed()
