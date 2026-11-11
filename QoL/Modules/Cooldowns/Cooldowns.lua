@@ -319,6 +319,41 @@ function C:RestorePosition()
     end
 end
 
+-- Move the window by a few pixels (screen pixels at the window's scale).
+function C:Nudge(dx, dy)
+    local f = self.frame
+    anchorTopLeft(f)
+    local left, top = f:GetLeft(), f:GetTop()
+    if not left or not top then return end
+    f:ClearAllPoints()
+    f:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", left + dx, top + dy)
+    self:SavePosition()
+end
+
+local NUDGE = { UP = { 0, 1 }, DOWN = { 0, -1 }, LEFT = { -1, 0 }, RIGHT = { 1, 0 } }
+
+-- While the window is unlocked and the mouse is over it, the arrow keys move
+-- it 1 pixel (10 with Shift). Every other key still reaches the game. Off in
+-- combat, where the game doesn't let addons hold on to keys.
+function C:UpdateKeyboard()
+    local f = self.frame
+    local want = not self.charDB.locked and f:IsShown() and f:IsMouseOver() and not InCombatLockdown()
+    if f.keyboard == want then return end
+    f.keyboard = want
+    if not want and not InCombatLockdown() then f:SetPropagateKeyboardInput(true) end
+    f:EnableKeyboard(want)
+end
+
+function C:OnKeyDown(key)
+    local step = NUDGE[key]
+    if InCombatLockdown() then return end
+    self.frame:SetPropagateKeyboardInput(not step)
+    if step then
+        local n = IsShiftKeyDown() and 10 or 1
+        self:Nudge(step[1] * n, step[2] * n)
+    end
+end
+
 function C:ResetPosition()
     self.charDB.point = nil
     self.charDB.shown = true
@@ -354,6 +389,17 @@ function C:CreateWindow()
         frame:StopMovingOrSizing()
         self:SavePosition()
     end)
+    if not InCombatLockdown() then f:SetPropagateKeyboardInput(true) end
+    f:SetScript("OnKeyDown", function(_, key) self:OnKeyDown(key) end)
+    f:SetScript("OnEnter", function(frame)
+        if self.charDB.locked then return end
+        GameTooltip:SetOwner(frame, "ANCHOR_TOP")
+        GameTooltip:SetText("Cooldowns")
+        GameTooltip:AddLine("Drag to move, or use the arrow keys while hovering (Shift for 10 pixels). "
+            .. "Drag the bottom-right corner to resize.", 1, 1, 1, true)
+        GameTooltip:Show()
+    end)
+    f:SetScript("OnLeave", GameTooltip_Hide)
 
     f.title = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     f.title:SetPoint("TOPLEFT", f, "TOPLEFT", PAD + 2, -4)
@@ -409,6 +455,7 @@ function C:CreateWindow()
     local elapsed = 0
     driver:SetScript("OnUpdate", function(_, dt)
         if grip.sizing then self:DragResize() end
+        self:UpdateKeyboard()
         if self.charDB.locked and f:IsShown() then
             local over = f:IsMouseOver() or lock:IsMouseOver()
             if lock:IsShown() ~= over then lock:SetShown(over) end
