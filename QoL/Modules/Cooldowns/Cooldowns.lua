@@ -103,7 +103,7 @@ end
 -- Rebuild the list of spells from the spellbook. Ranks of one spell share a
 -- cooldown, so each name appears once, using its highest rank.
 function C:ScanSpellbook()
-    local list, byName = {}, {}
+    local list, byName, byId = {}, {}, {}
     local ok, err = pcall(eachSpell, function(name, id, icon, tabName)
         if type(name) ~= "string" or name == "" then return end
         local entry = byName[name]
@@ -113,13 +113,14 @@ function C:ScanSpellbook()
             table.insert(list, entry)
         end
         entry.id = id
+        byId[id] = entry -- every rank, so a cast of any rank finds the spell
         entry.icon = icon or spellIcon(id) or entry.icon
     end)
     if not ok then QoL:Print("couldn't read the spellbook: " .. tostring(err)) end
     for _, entry in ipairs(list) do
         entry.cooldown = baseCooldown(entry.id)
     end
-    self.spellbook, self.byName = list, byName
+    self.spellbook, self.byName, self.byId = list, byName, byId
     return list
 end
 
@@ -224,16 +225,40 @@ local function getCooldown(id)
     if _G.GetSpellCooldown then return _G.GetSpellCooldown(id) end
 end
 
+-- Last cooldown we could read (or guessed from a cast) for each spell name,
+-- for when the game hides the numbers in combat: { start, duration }.
+local known = {}
+
+-- In combat the game can hide cooldown numbers from addons. When the player
+-- casts a tracked spell, guess its cooldown from the spell's base cooldown.
+function C:OnSpellCast(spellID)
+    if type(spellID) ~= "number" or isSecret(spellID) then return end
+    local entry = self.byId and self.byId[spellID]
+    if not entry or not self:IsTracked(entry.name) then return end
+    local base = entry.cooldown or baseCooldown(spellID)
+    if base and base > GCD then
+        known[entry.name] = { _G.GetTime(), base }
+    end
+end
+
 -- Fills `state` for one spell:
 --   remaining  seconds left (0 when ready), or nil when the client hides it
 --   waiting    the cooldown starts when an effect ends (e.g. Stealth)
-local function readState(state, id)
-    local ok, start, duration, enabled = pcall(getCooldown, id)
+--   secret     the game hid the numbers; start/duration are then only for
+--              the game's own swipe and must not be compared or added
+local function readState(state, entry)
+    local ok, start, duration, enabled = pcall(getCooldown, entry.id)
     state.start, state.duration, state.secret = nil, nil, false
     state.remaining, state.waiting = 0, false
     if not ok then return end
     if isSecret(start) or isSecret(duration) or isSecret(enabled) then
         state.secret, state.start, state.duration, state.remaining = true, start, duration, nil
+        -- Fall back to the last numbers we saw, if that cooldown is still running.
+        local k = known[entry.name]
+        if k then
+            local left = k[1] + k[2] - _G.GetTime()
+            if left > 0 then state.remaining = left else known[entry.name] = nil end
+        end
         return
     end
     if enabled == false or enabled == 0 then
@@ -243,6 +268,9 @@ local function readState(state, id)
     if start and duration and start > 0 and duration > GCD then
         state.start, state.duration = start, duration
         state.remaining = math.max(0, start + duration - _G.GetTime())
+        known[entry.name] = { start, duration }
+    else
+        known[entry.name] = nil
     end
 end
 
@@ -283,7 +311,13 @@ local function createIcon(parent)
     return b
 end
 
-local function setCooldown(b, start, duration)
+local function setCooldown(b, start, duration, secret)
+    if secret then
+        -- Hidden numbers can't be compared, so hand them straight to the game.
+        b.cdStart, b.cdDuration = nil, nil
+        pcall(b.cd.SetCooldown, b.cd, start, duration)
+        return
+    end
     if b.cdStart == start and b.cdDuration == duration then return end
     b.cdStart, b.cdDuration = start, duration
     pcall(b.cd.SetCooldown, b.cd, start or 0, duration or 0)
@@ -500,7 +534,7 @@ function C:Update()
             local b = self.icons[i] or createIcon(f)
             self.icons[i] = b
             b.entry, b.index = entry, i
-            readState(b.state, entry.id)
+            readState(b.state, entry)
             if not (db.hideReady and b.state.remaining == 0 and not b.state.waiting) then
                 table.insert(order, b)
             end
@@ -561,15 +595,14 @@ function C:Update()
         b.icon:SetTexture(b.entry.icon or spellIcon(b.entry.id))
 
         local st = b.state
-        if st.secret then
-            -- The client hides the numbers: let the game's own swipe and countdown show them.
+        setCooldown(b, st.start, st.duration, st.secret)
+        if st.remaining == nil then
+            -- Numbers hidden and nothing known: let the game's own countdown show.
             setHideNumbers(b, false)
-            setCooldown(b, st.start, st.duration)
             b.timer:SetText("")
             b.icon:SetDesaturated(false)
         else
             setHideNumbers(b, true)
-            setCooldown(b, st.start, st.duration)
             local cooling = st.remaining > 0
             b.icon:SetDesaturated(cooling or st.waiting)
             if cooling then
@@ -607,7 +640,14 @@ function C:OnEnable()
     for _, event in ipairs({ "SPELLS_CHANGED", "LEARNED_SPELL_IN_TAB", "LEARNED_SPELL_IN_SKILL_LINE" }) do
         pcall(events.RegisterEvent, events, event)
     end
-    events:SetScript("OnEvent", QoL:Guard("Cooldowns", function()
+    if not (events.RegisterUnitEvent and pcall(events.RegisterUnitEvent, events, "UNIT_SPELLCAST_SUCCEEDED", "player")) then
+        pcall(events.RegisterEvent, events, "UNIT_SPELLCAST_SUCCEEDED")
+    end
+    events:SetScript("OnEvent", QoL:Guard("Cooldowns", function(_, event, unit, _, spellID)
+        if event == "UNIT_SPELLCAST_SUCCEEDED" then
+            if unit == "player" then self:OnSpellCast(spellID) end
+            return
+        end
         self:ScanSpellbook()
         self:Changed()
     end))
