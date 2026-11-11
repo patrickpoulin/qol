@@ -156,6 +156,16 @@ local HELPERS = {
         get = function() return ns.ActionBar.db.hideGryphons end,
         set = function(on) ns.ActionBar:SetHideGryphons(on) end,
     },
+
+    { kind = "header", label = "Tooltips" },
+    {
+        label = "Show vendor sell price on item tooltips",
+        tooltip = "Adds what a vendor would pay for an item to its tooltip, in your bags, bank, "
+            .. "character sheet, loot and chat links. A stack shows the whole stack and one item. "
+            .. "At a vendor the game shows its own price instead. Type /qol price to switch it from chat.",
+        get = function() return ns.VendorPrice.db.enabled end,
+        set = function(on) ns.VendorPrice:SetEnabled(on) end,
+    },
 }
 
 local function setTooltip(frame, helper)
