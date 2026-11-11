@@ -2,7 +2,7 @@
 ## Title: QoL
 ## Notes: Quality-of-life features. Type /qol for help.
 ## Author: Patrick
-## Version: 0.15.3
+## Version: 0.16.0
 ## SavedVariables: QoLDB
 ## SavedVariablesPerCharacter: QoLCharDB
 
@@ -16,6 +16,7 @@ Modules/Todo/Reference.lua
 Modules/Todo/FishingPanel.lua
 Modules/Todo/HelpersPanel.lua
 Modules/Todo/ContactsPanel.lua
+Modules/Todo/CooldownsPanel.lua
 Modules/Todo/Dialogs.lua
 Modules/Todo/MainFrame.lua
 Modules/Todo/Tabs.lua
@@ -39,3 +40,5 @@ Modules/Mail/Mail.lua
 Modules/Mail/Sync.lua
 Modules/Mail/Dialogs.lua
 Modules/Mail/Panel.lua
+
+Modules/Cooldowns/Cooldowns.lua
