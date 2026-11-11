@@ -144,7 +144,6 @@ local function createRow(parent)
     row.icon:SetSize(ICON_SIZE, ICON_SIZE)
     row.icon:SetPoint("LEFT", check, "RIGHT", 1, 0)
     row.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
-    if row.icon.SetSnapToPixelGrid then row.icon:SetSnapToPixelGrid(false) end
 
     row.cd = row:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
     row.cd:SetPoint("RIGHT", row, "RIGHT", -4, 0)

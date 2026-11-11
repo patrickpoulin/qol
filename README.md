@@ -40,7 +40,6 @@ A built-in **CDs** tab in the QoL window, and a small window of cooldown timers.
 - Click **Lock** on the window (or tick **Lock window** on the tab) to stop it moving and let clicks go through it. Hover the window to get the **Unlock** button back.
 - **Hide ready spells** shows only spells on cooldown, so the window is a queue. **Side by side** (on by default) lines the icons up in a row, soonest on the left. Untick it to stack them in a column.
 - **Only spells with a cooldown** (on by default) keeps spells like Fireball out of the list. Ranks of one spell show once.
-- Icons are drawn with smooth scaling. The game only has spell icons at 64x64, so they get softer above that size.
 - Each character has its own spells and window.
 
 | Command | What it does |

@@ -40,23 +40,6 @@ local C = QoL:RegisterModule("cds", {
 })
 ns.Cooldowns = C
 
--- Icons -----------------------------------------------------------------------
-
--- Spell icons only ship at 64x64. By default the game snaps a texture's
--- texels to screen pixels and filters it bilinearly without mipmaps, which
--- looks blocky when an icon is scaled. Turn snapping off so it scales smoothly.
-function C.SmoothTexture(tex)
-    if tex.SetSnapToPixelGrid then tex:SetSnapToPixelGrid(false) end
-    if tex.SetTexelSnappingBias then tex:SetTexelSnappingBias(0) end
-end
-
--- SetTexture with trilinear (mipmapped) filtering where the client supports it.
-function C.SetSmoothTexture(tex, file)
-    if not (file and pcall(tex.SetTexture, tex, file, nil, nil, "TRILINEAR")) then
-        tex:SetTexture(file)
-    end
-end
-
 -- Spellbook ----------------------------------------------------------------
 
 local function isSecret(v) return QoL.IsSecret(v) end
@@ -283,7 +266,6 @@ local function createIcon(parent)
     b.icon = b:CreateTexture(nil, "ARTWORK")
     b.icon:SetAllPoints()
     b.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93) -- trim the default border
-    C.SmoothTexture(b.icon)
 
     local ok, cd = pcall(CreateFrame, "Cooldown", nil, b, "CooldownFrameTemplate")
     if not ok or not cd then cd = CreateFrame("Cooldown", nil, b) end
@@ -529,11 +511,7 @@ function C:Update()
             b.fontSize = size
             b.timer:SetFont(font, math.max(8, math.floor(size * 0.42)), "OUTLINE")
         end
-        local tex = b.entry.icon or spellIcon(b.entry.id)
-        if b.tex ~= tex then
-            b.tex = tex
-            C.SetSmoothTexture(b.icon, tex)
-        end
+        b.icon:SetTexture(b.entry.icon or spellIcon(b.entry.id))
 
         local st = b.state
         if st.secret then
