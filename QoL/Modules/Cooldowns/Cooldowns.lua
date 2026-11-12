@@ -31,6 +31,8 @@ local C = QoL:RegisterModule("cds", {
         sideBySide = true, -- icons in a row; off stacks them in a column
         hideReady = false,
         onlyCooldowns = true, -- CDs tab lists only spells that have a cooldown
+        showAspect = true, -- hunters: small icon of the active aspect
+        showGrowl = true,  -- hunters: small icon showing if the pet's Growl autocast is on
     },
     slashHelp = {
         "/qol cds - open the CDs tab to pick spells",
@@ -291,8 +293,32 @@ end
 
 -- Window ---------------------------------------------------------------------
 
+-- Each icon is a secure button, so clicking it casts the spell. The game
+-- doesn't let addons move, resize, show or hide secure buttons in combat, so
+-- during a fight the icons stay where they are and only their timers change.
 local function createIcon(parent)
-    local b = CreateFrame("Frame", nil, parent)
+    local b = CreateFrame("Button", nil, parent, "SecureActionButtonTemplate")
+    b:RegisterForClicks("AnyUp")
+    b:SetAttribute("useOnKeyDown", false) -- newer clients: act on the release
+    b:SetAttribute("type", "spell")
+    b:RegisterForDrag("LeftButton")
+    b:SetScript("OnDragStart", function()
+        if not C.charDB.locked and not InCombatLockdown() then parent:StartMoving() end
+    end)
+    b:SetScript("OnDragStop", function()
+        parent:StopMovingOrSizing()
+        C:SavePosition()
+    end)
+    b:SetScript("OnEnter", function(btn)
+        if not btn.entry then return end
+        GameTooltip:SetOwner(btn, "ANCHOR_TOP")
+        if not (GameTooltip.SetSpellByID and pcall(GameTooltip.SetSpellByID, GameTooltip, btn.entry.id)) then
+            GameTooltip:SetText(btn.entry.name, 1, 1, 1)
+        end
+        GameTooltip:AddLine("Click to cast.", 0.5, 0.5, 0.5)
+        GameTooltip:Show()
+    end)
+    b:SetScript("OnLeave", GameTooltip_Hide)
     b.icon = b:CreateTexture(nil, "ARTWORK")
     b.icon:SetAllPoints()
     b.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93) -- trim the default border
@@ -391,6 +417,7 @@ function C:OnKeyDown(key)
 end
 
 function C:ResetPosition()
+    if InCombatLockdown() then return QoL:Print("can't move the cooldown window in combat.") end
     self.charDB.point = nil
     self.charDB.shown = true
     self:RestorePosition()
@@ -400,10 +427,12 @@ end
 
 function C:ApplyLock()
     local f, locked = self.frame, self.charDB.locked
-    f:EnableMouse(not locked) -- locked: clicks go through to the game
+    -- Locked: clicks between the icons go through to the game. The window
+    -- holds secure buttons, so this has to wait until combat ends.
+    if not InCombatLockdown() then f:EnableMouse(not locked) end
     f:SetBackdropColor(0.05, 0.05, 0.08, locked and 0 or 0.7)
     f:SetBackdropBorderColor(0.5, 0.5, 0.55, locked and 0 or 1)
-    f.title:SetShown(not locked)
+    f.title:SetShown(not locked and not f.statusShown)
     f.grip:SetShown(not locked)
     f.lock:SetText(locked and "Unlock" or "Lock")
     f.lock:SetShown(not locked)
@@ -419,7 +448,7 @@ function C:CreateWindow()
     f:SetBackdrop(BACKDROP)
     f:RegisterForDrag("LeftButton")
     f:SetScript("OnDragStart", function(frame)
-        if not self.charDB.locked then frame:StartMoving() end
+        if not self.charDB.locked and not InCombatLockdown() then frame:StartMoving() end
     end)
     f:SetScript("OnDragStop", function(frame)
         frame:StopMovingOrSizing()
@@ -478,9 +507,9 @@ function C:CreateWindow()
     grip:SetScript("OnHide", function() grip.sizing = nil end)
     f.grip = grip
 
+    self:CreateStatusIcons()
+
     f.empty = f:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-    f.empty:SetPoint("TOPLEFT", f, "TOPLEFT", PAD + 2, -HEADER - 2)
-    f.empty:SetPoint("RIGHT", f, "RIGHT", -PAD, 0)
     f.empty:SetJustifyH("LEFT")
     f.empty:SetText("Pick spells on the CDs tab (/qol cds).")
 
@@ -517,9 +546,48 @@ function C:DragResize()
     self:SetIconSize(s.size + delta)
 end
 
+-- Draw one icon's texture, cooldown swipe and timer. Safe in combat.
+local function paintIcon(b)
+    b.icon:SetTexture(b.entry.icon or spellIcon(b.entry.id))
+    local st = b.state
+    setCooldown(b, st.start, st.duration, st.secret)
+    if st.remaining == nil then
+        -- Numbers hidden and nothing known: let the game's own countdown show.
+        setHideNumbers(b, false)
+        b.timer:SetText("")
+        b.icon:SetDesaturated(false)
+        return
+    end
+    setHideNumbers(b, true)
+    local cooling = st.remaining > 0
+    b.icon:SetDesaturated(cooling or st.waiting)
+    if cooling then
+        b.timer:SetText(formatTime(st.remaining))
+        if st.remaining < 5 then
+            b.timer:SetTextColor(1, 0.82, 0)
+        else
+            b.timer:SetTextColor(1, 1, 1)
+        end
+    else
+        b.timer:SetText("")
+    end
+end
+
+-- In combat nothing can move: refresh the timers of the icons already shown.
+function C:UpdateInCombat()
+    for _, b in ipairs(self.icons) do
+        if b.placed and b.entry then
+            readState(b.state, b.entry)
+            paintIcon(b)
+        end
+    end
+    self:PaintStatusIcons()
+end
+
 function C:Update()
     local f = self.frame
     if not f then return end
+    if InCombatLockdown() then return self:UpdateInCombat() end
     local db = self.charDB
     if not db.shown then
         f:Hide()
@@ -536,13 +604,16 @@ function C:Update()
             local b = self.icons[i] or createIcon(f)
             self.icons[i] = b
             b.entry, b.index = entry, i
+            if b.spell ~= entry.name then
+                b.spell = entry.name
+                b:SetAttribute("spell", entry.name)
+            end
             readState(b.state, entry)
             if not (db.hideReady and b.state.remaining == 0 and not b.state.waiting) then
                 table.insert(order, b)
             end
         end
     end
-    for i = #db.spells + 1, #self.icons do self.icons[i]:Hide() end
     table.sort(order, function(a, b)
         local ka, kb = sortKey(a.state), sortKey(b.state)
         if ka ~= kb then return ka < kb end
@@ -552,31 +623,42 @@ function C:Update()
     local size = db.iconSize
     local n = #order
     local empty = n == 0
-    if empty and db.locked then
+    local statusCount, statusSize = self:LayoutStatusIcons(size)
+    if empty and db.locked and statusCount == 0 then
         f:Hide()
         return
     end
 
-    -- Size the box around the icons, keeping room for the title and lock button.
+    -- Header: the title, or the hunter status icons, and the lock button.
+    local header = statusCount > 0 and statusSize + 6 or HEADER
+    local headerWidth = PAD + (statusCount > 0 and statusCount * (statusSize + GAP) or 26) + 4 + 44 + PAD
+
+    -- Size the box around the icons.
     local slots = math.max(n, 1)
     local length = slots * size + (slots - 1) * GAP
     local w, h
     if db.sideBySide then
-        w, h = PAD * 2 + length, HEADER + size + PAD
+        w, h = PAD * 2 + length, header + size + PAD
     else
-        w, h = PAD * 2 + size, HEADER + length + PAD
+        w, h = PAD * 2 + size, header + length + PAD
     end
     local contentWidth = w - 2 * PAD
     if empty then
-        w, h = math.max(w, 150), math.max(h, HEADER + 36)
-        f.empty:SetWidth(w - 2 * PAD - 4)
+        if db.locked then
+            w, h = math.max(w, headerWidth), header
+        else
+            w, h = math.max(w, 150), math.max(h, header + 36)
+            f.empty:SetWidth(w - 2 * PAD - 4)
+        end
     end
-    w = math.max(w, 70)
+    w = math.max(w, headerWidth)
     if math.abs(f:GetWidth() - w) > 0.5 or math.abs(f:GetHeight() - h) > 0.5 then
         anchorTopLeft(f)
         f:SetSize(w, h)
     end
-    f.empty:SetShown(empty)
+    f.empty:ClearAllPoints()
+    f.empty:SetPoint("TOPLEFT", f, "TOPLEFT", PAD + 2, -header - 2)
+    f.empty:SetShown(empty and not db.locked)
     local x0 = math.floor((w - contentWidth) / 2) -- centre the icons in a box wider than them
 
     for _, b in ipairs(self.icons) do b.placed = false end
@@ -586,44 +668,183 @@ function C:Update()
         b:SetSize(size, size)
         b:ClearAllPoints()
         if db.sideBySide then
-            b:SetPoint("TOPLEFT", f, "TOPLEFT", x0 + (k - 1) * (size + GAP), -HEADER)
+            b:SetPoint("TOPLEFT", f, "TOPLEFT", x0 + (k - 1) * (size + GAP), -header)
         else
-            b:SetPoint("TOPLEFT", f, "TOPLEFT", x0, -HEADER - (k - 1) * (size + GAP))
+            b:SetPoint("TOPLEFT", f, "TOPLEFT", x0, -header - (k - 1) * (size + GAP))
         end
         if b.fontSize ~= size then
             b.fontSize = size
             b.timer:SetFont(font, math.max(8, math.floor(size * 0.42)), "OUTLINE")
         end
-        b.icon:SetTexture(b.entry.icon or spellIcon(b.entry.id))
-
-        local st = b.state
-        setCooldown(b, st.start, st.duration, st.secret)
-        if st.remaining == nil then
-            -- Numbers hidden and nothing known: let the game's own countdown show.
-            setHideNumbers(b, false)
-            b.timer:SetText("")
-            b.icon:SetDesaturated(false)
-        else
-            setHideNumbers(b, true)
-            local cooling = st.remaining > 0
-            b.icon:SetDesaturated(cooling or st.waiting)
-            if cooling then
-                b.timer:SetText(formatTime(st.remaining))
-                if st.remaining < 5 then
-                    b.timer:SetTextColor(1, 0.82, 0)
-                else
-                    b.timer:SetTextColor(1, 1, 1)
-                end
-            else
-                b.timer:SetText("")
-            end
-        end
+        paintIcon(b)
         b:Show()
     end
     for _, b in ipairs(self.icons) do
         if not b.placed then b:Hide() end
     end
+    self:PaintStatusIcons()
     f:Show()
+end
+
+-- Hunter status icons ------------------------------------------------------------
+
+local GROWL = "Growl"
+
+local function isHunter()
+    local _, class = UnitClass("player")
+    return class == "HUNTER"
+end
+C.IsHunter = isHunter
+
+local function getBuff(i)
+    local auras = _G.C_UnitAuras
+    if auras and auras.GetAuraDataByIndex then
+        local data = auras.GetAuraDataByIndex("player", i, "HELPFUL")
+        if data then return data.name, data.icon end
+        return
+    end
+    if _G.UnitBuff then
+        local name, icon = _G.UnitBuff("player", i)
+        return name, icon
+    end
+end
+
+-- The aspect the player has on: name, icon. Returns false while the game
+-- hides buffs from addons, and nil when no aspect is on.
+local function activeAspect()
+    for i = 1, 40 do
+        local ok, name, icon = pcall(getBuff, i)
+        if not ok then return false end
+        if name == nil then return nil end
+        if isSecret(name) then return false end
+        if name:find("^Aspect of") then return name, icon end
+    end
+end
+
+-- The pet's Growl: icon, autocast on. nil when there's no pet or it has no Growl.
+local function growlInfo()
+    local getInfo = _G.GetPetActionInfo
+    if not getInfo or not UnitExists("pet") then return end
+    for i = 1, _G.NUM_PET_ACTION_SLOTS or 10 do
+        local r = { getInfo(i) }
+        local name, icon, autoOn
+        if type(r[3]) == "boolean" or r[3] == nil then
+            name, icon, autoOn = r[1], r[2], r[6] -- name, texture, isToken, isActive, autoCastAllowed, autoCastEnabled
+        else
+            name, icon, autoOn = r[1], r[3], r[7] -- older: name, subtext, texture, ...
+        end
+        if not isSecret(name) and name == GROWL then
+            if isSecret(autoOn) then return icon, nil end
+            return icon, autoOn and true or false
+        end
+    end
+end
+
+local function createStatus(parent, secure)
+    local b
+    if secure then
+        b = CreateFrame("Button", nil, parent, "SecureActionButtonTemplate,BackdropTemplate")
+        b:RegisterForClicks("AnyUp")
+        b:SetAttribute("useOnKeyDown", false)
+    else
+        b = CreateFrame("Frame", nil, parent, "BackdropTemplate")
+        b:EnableMouse(true)
+    end
+    b:SetBackdrop({ edgeFile = "Interface\\Buttons\\WHITE8X8", edgeSize = 1 })
+    b.icon = b:CreateTexture(nil, "ARTWORK")
+    b.icon:SetPoint("TOPLEFT", 1, -1)
+    b.icon:SetPoint("BOTTOMRIGHT", -1, 1)
+    b.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
+    b:SetScript("OnLeave", GameTooltip_Hide)
+    b:Hide()
+    return b
+end
+
+function C:CreateStatusIcons()
+    local f = self.frame
+    local aspect = createStatus(f, false)
+    aspect:SetScript("OnEnter", function(btn)
+        GameTooltip:SetOwner(btn, "ANCHOR_TOP")
+        GameTooltip:SetText(self.aspectName or "No aspect on", 1, 1, 1)
+        GameTooltip:AddLine("The aspect you have on right now.", 0.5, 0.5, 0.5, true)
+        GameTooltip:Show()
+    end)
+
+    local growl = createStatus(f, true)
+    growl:SetAttribute("type", "macro")
+    growl:SetAttribute("macrotext", "/petautocasttoggle " .. GROWL)
+    growl:SetScript("OnEnter", function(btn)
+        GameTooltip:SetOwner(btn, "ANCHOR_TOP")
+        local on = self.growlOn
+        GameTooltip:SetText(on == nil and "Growl" or ("Growl autocast is " .. (on and "on" or "off")), 1, 1, 1)
+        GameTooltip:AddLine("Click to turn your pet's Growl autocast on or off.", 0.5, 0.5, 0.5, true)
+        GameTooltip:Show()
+    end)
+    f.aspect, f.growl = aspect, growl
+end
+
+-- Place the status icons in the header (out of combat only). Returns how
+-- many are shown and their size.
+function C:LayoutStatusIcons(size)
+    local f, db = self.frame, self.charDB
+    local hunter = isHunter()
+    local wantAspect = hunter and db.showAspect
+    local wantGrowl = hunter and db.showGrowl and growlInfo() ~= nil
+    local s = math.max(16, math.floor(size * 0.5))
+    local count = 0
+    for _, item in ipairs({ { f.aspect, wantAspect }, { f.growl, wantGrowl } }) do
+        local b, want = item[1], item[2]
+        if want then
+            b:SetSize(s, s)
+            b:ClearAllPoints()
+            b:SetPoint("TOPLEFT", f, "TOPLEFT", PAD + count * (s + GAP), -3)
+            count = count + 1
+        end
+        b:SetShown(want and true or false)
+    end
+    f.statusShown = count > 0
+    f.title:SetShown(not db.locked and count == 0)
+    return count, s
+end
+
+-- Refresh the status icons' pictures and colours. Safe in combat.
+function C:PaintStatusIcons()
+    local f = self.frame
+    if f.aspect:IsShown() then
+        local name, icon = activeAspect()
+        if name ~= false then -- false: the game is hiding buffs; keep what we had
+            self.aspectName, self.aspectIcon = name, icon
+        end
+        if self.aspectName then
+            f.aspect.icon:SetTexture(self.aspectIcon)
+            f.aspect.icon:SetDesaturated(false)
+            f.aspect:SetBackdropBorderColor(0, 0, 0, 1)
+        else
+            -- No aspect on: a red question mark, so a missing aspect stands out.
+            f.aspect.icon:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
+            f.aspect.icon:SetDesaturated(true)
+            f.aspect:SetBackdropBorderColor(1, 0.2, 0.2, 1)
+        end
+    end
+    if f.growl:IsShown() then
+        local icon, on = growlInfo()
+        if icon then
+            self.growlOn = on
+            f.growl.icon:SetTexture(icon)
+            f.growl.icon:SetDesaturated(on == false)
+            f.growl.icon:SetAlpha(on == false and 0.6 or 1)
+            if on then
+                f.growl:SetBackdropBorderColor(0.2, 1, 0.2, 1)
+            elseif on == false then
+                f.growl:SetBackdropBorderColor(1, 0.2, 0.2, 1)
+            else
+                f.growl:SetBackdropBorderColor(0, 0, 0, 1)
+            end
+        else
+            -- Pet gone mid-fight: the button can't hide until combat ends.
+            f.growl.icon:SetAlpha(0.2)
+        end
+    end
 end
 
 -- Lifecycle and slash ----------------------------------------------------------
@@ -639,7 +860,8 @@ function C:OnEnable()
 
     local events = CreateFrame("Frame")
     -- Not every client has every event; registering an unknown one is an error.
-    for _, event in ipairs({ "SPELLS_CHANGED", "LEARNED_SPELL_IN_TAB", "LEARNED_SPELL_IN_SKILL_LINE" }) do
+    for _, event in ipairs({ "SPELLS_CHANGED", "LEARNED_SPELL_IN_TAB", "LEARNED_SPELL_IN_SKILL_LINE",
+        "PLAYER_REGEN_ENABLED" }) do
         pcall(events.RegisterEvent, events, event)
     end
     if not (events.RegisterUnitEvent and pcall(events.RegisterUnitEvent, events, "UNIT_SPELLCAST_SUCCEEDED", "player")) then
@@ -648,6 +870,9 @@ function C:OnEnable()
     events:SetScript("OnEvent", QoL:Guard("Cooldowns", function(_, event, unit, _, spellID)
         if event == "UNIT_SPELLCAST_SUCCEEDED" then
             if unit == "player" then self:OnSpellCast(spellID) end
+            return
+        elseif event == "PLAYER_REGEN_ENABLED" then
+            self:Changed() -- catch up on anything combat held back
             return
         end
         self:ScanSpellbook()

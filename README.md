@@ -36,10 +36,12 @@ A built-in **CDs** tab in the QoL window, and a small window of cooldown timers.
 
 - Tick any spells and racials from your spellbook on the CDs tab (search box at the top). Each one shows in the cooldown window as its icon with the time left on top.
 - The window is sorted so you can see what's next: ready spells at the top, then spells on cooldown with the one coming back soonest first. Icons on cooldown are greyed out, and the timer turns yellow in the last 5 seconds.
-- Drag the window to move it. For fine placement, hover over the unlocked window and press the arrow keys to move it 1 pixel at a time (10 with Shift). Other keys still work as normal. Drag its bottom-right corner (or use the **Icon size** slider) to make the whole box bigger or smaller.
+- Drag the window (or any icon) to move it. For fine placement, hover over the unlocked window and press the arrow keys to move it 1 pixel at a time (10 with Shift). Other keys still work as normal. Drag its bottom-right corner (or use the **Icon size** slider) to make the whole box bigger or smaller.
 - Click **Lock** on the window (or tick **Lock window** on the tab) to stop it moving and let clicks go through it. Hover the window to get the **Unlock** button back.
 - **Hide ready spells** shows only spells on cooldown, so the window is a queue. **Side by side** (on by default) lines the icons up in a row, soonest on the left. Untick it to stack them in a column.
 - **Only spells with a cooldown** (on by default) keeps spells like Fireball out of the list. Ranks of one spell show once.
+- Click an icon to cast that spell. In combat the game doesn't let addons move clickable buttons, so the order freezes until the fight ends. The timers keep counting.
+- **Hunters** get two small icons at the top of the window, each with its own checkbox on the tab. **Show aspect** shows the aspect you have on, or a red question mark when none is. **Show Growl** shows your pet's Growl with a green border when autocast is on and red when it's off. Click it to switch autocast.
 - Each character has its own spells and window.
 
 | Command | What it does |
