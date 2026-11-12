@@ -81,7 +81,7 @@ Shows your threat on the enemy you have targeted, as a small number just above t
 
 ### Misc tab
 
-A built-in tab in the QoL window with on/off switches and settings, in sections: **Threat** (target frame and nameplate %), **Pet health** (the warning, its parts and both levels; the parts dim when the warning is off), **Map** (zeppelin, boat and flight master pins), **Window** (how see-through the background is; the text and border stay solid) and **Action bar** (hide the gryphons on either end of the main action bar).
+A built-in tab in the QoL window with on/off switches and settings, in sections: **Threat** (target frame and nameplate %), **Pet health** (the warning, its parts and both levels; the parts dim when the warning is off), **Map** (zeppelin, boat and flight master pins), **Window** (how see-through the background is; the text and border stay solid) **Action bar** (hide the gryphons on either end of the main action bar) and **Tooltips** (vendor sell price on item tooltips).
 
 - A small face and your % to pull aggro: `100%` means you pull (or already have it). The face and number follow the game's threat colours: grey, yellow when you are close to pulling, orange, then red when the mob is on you. The face smiles while your threat is low, goes to a flat mouth when you are close (yellow and orange), and opens its mouth once the mob is on you.
 - It reads the game's own threat API (`UnitDetailedThreatSituation`). If the client doesn't have it, QoL uses LibThreatClassic2 when another addon (such as Details! or ThreatClassic2) ships it. With neither, nothing is shown.
@@ -121,6 +121,17 @@ Makes it obvious when your pet (hunter pet or warlock demon) is close to dying.
 ### Action bar gryphons (`/qol gryphons`)
 
 Hides the two gryphon pictures on the left and right ends of the main action bar. Turn it on with the checkbox in the **Action bar** section of the Misc tab, or type `/qol gryphons` (also `on` / `off`). It takes effect straight away, works in combat, and doesn't touch your buttons or keybinds. Untick it to bring them back. `/qol gryphons debug` prints how many end caps QoL found, if they ever don't disappear.
+
+### Vendor price (`/qol price`)
+
+Adds an item's vendor sell price, in gold, silver and copper, to its tooltip. On by default. The game only shows it while a vendor window is open; QoL shows it everywhere else: your bags, bank, character sheet, loot window, chat links and the comparison tooltips.
+
+- A stack shows the price of the whole stack (with the count) and of one item.
+- Items vendors won't buy get no line.
+- At a vendor the game shows its own price, so QoL adds nothing there. It also adds nothing to a tooltip that already shows a price, so you never see it twice.
+- The first time you hover an item your client hasn't loaded yet, the price is added a moment later, once the game has it.
+
+Turn it off with the checkbox in the **Tooltips** section of the Misc tab, or with `/qol price` (also `on` / `off`).
 
 ### Zeppelins (`/qol zeppelins`)
 
