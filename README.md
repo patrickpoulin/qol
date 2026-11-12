@@ -50,6 +50,7 @@ A built-in **CDs** tab in the QoL window, and a small window of cooldown timers.
 | `/qol cds show` / `hide` | Show or hide the window |
 | `/qol cds lock` / `unlock` | Stop or allow moving and resizing |
 | `/qol cds reset` | Move the window back near the centre |
+| `/qol cds debug` | Print what QoL reads for each tracked spell, to help fix a missing timer |
 
 ### Fishing (`/qol fish`)
 

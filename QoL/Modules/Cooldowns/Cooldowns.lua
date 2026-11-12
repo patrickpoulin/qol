@@ -36,6 +36,7 @@ local C = QoL:RegisterModule("cds", {
         "/qol cds - open the CDs tab to pick spells",
         "/qol cds add <spell> | remove <spell> | list",
         "/qol cds show | hide | lock | unlock | reset",
+        "/qol cds debug - print what QoL reads for each tracked spell",
     },
 })
 ns.Cooldowns = C
@@ -232,6 +233,7 @@ local known = {}
 -- In combat the game can hide cooldown numbers from addons. When the player
 -- casts a tracked spell, guess its cooldown from the spell's base cooldown.
 function C:OnSpellCast(spellID)
+    self.lastCast = { id = isSecret(spellID) and "hidden" or tostring(spellID), at = _G.GetTime() }
     if type(spellID) ~= "number" or isSecret(spellID) then return end
     local entry = self.byId and self.byId[spellID]
     if not entry or not self:IsTracked(entry.name) then return end
@@ -653,6 +655,41 @@ function C:OnEnable()
     end))
 end
 
+-- What the window sees, to track down a timer that doesn't show.
+local function show(v)
+    if isSecret(v) then return "|cffff8800hidden|r" end
+    if type(v) == "number" then return ("%.1f"):format(v) end
+    return tostring(v)
+end
+
+function C:Debug()
+    local getCVar = _G.GetCVar
+    QoL:Print(("cooldowns debug: in combat %s, secret values %s, C_Spell.GetSpellCooldown %s, game countdown numbers %s"):format(
+        tostring(InCombatLockdown() and true or false), tostring(_G.issecretvalue ~= nil),
+        tostring(C_Spell ~= nil and C_Spell.GetSpellCooldown ~= nil),
+        tostring(getCVar and getCVar("countdownForCooldowns"))))
+    if self.lastCast then
+        QoL:Print(("last cast seen: spell %s, %.0fs ago"):format(self.lastCast.id, _G.GetTime() - self.lastCast.at))
+    else
+        QoL:Print("no casts seen yet.")
+    end
+    if #self.charDB.spells == 0 then return QoL:Print("no spells tracked.") end
+    for _, name in ipairs(self.charDB.spells) do
+        local entry = self.byName and self.byName[name]
+        if not entry then
+            QoL:Print(("  %s: not in the spellbook"):format(name))
+        else
+            local ok, start, duration, enabled = pcall(getCooldown, entry.id)
+            local state = {}
+            readState(state, entry)
+            local k = known[name]
+            QoL:Print(("  %s (%d): read %s, start %s, duration %s, enabled %s, left %s, saved %s"):format(
+                name, entry.id, tostring(ok), show(start), show(duration), show(enabled),
+                show(state.remaining), k and ("%.0fs"):format(k[2]) or "none"))
+        end
+    end
+end
+
 function C:OpenTab()
     local todo = ns.Todo
     if todo and todo.frame then
@@ -681,6 +718,8 @@ function C:OnSlash(args)
         if not entry then return QoL:Print(("'%s' isn't in your spellbook."):format(rest)) end
         self:SetTracked(entry.name, cmd == "add")
         QoL:Print(("%s %s."):format(cmd == "add" and "tracking" or "stopped tracking", entry.name))
+    elseif cmd == "debug" then
+        self:Debug()
     elseif cmd == "list" then
         if #self.charDB.spells == 0 then return QoL:Print("no spells tracked. Type /qol cds to pick some.") end
         QoL:Print("tracking: " .. table.concat(self.charDB.spells, ", "))
