@@ -36,10 +36,12 @@ A built-in **CDs** tab in the QoL window, and a small window of cooldown timers.
 
 - Tick any spells and racials from your spellbook on the CDs tab (search box at the top). Each one shows in the cooldown window as its icon with the time left on top.
 - The window is sorted so you can see what's next: ready spells at the top, then spells on cooldown with the one coming back soonest first. Icons on cooldown are greyed out, and the timer turns yellow in the last 5 seconds.
-- Drag the window to move it. For fine placement, hover over the unlocked window and press the arrow keys to move it 1 pixel at a time (10 with Shift). Other keys still work as normal. Drag its bottom-right corner (or use the **Icon size** slider) to make the whole box bigger or smaller.
+- Drag the window (or any icon) to move it. For fine placement, hover over the unlocked window and press the arrow keys to move it 1 pixel at a time (10 with Shift). Other keys still work as normal. Drag its bottom-right corner (or use the **Icon size** slider) to make the whole box bigger or smaller.
 - Click **Lock** on the window (or tick **Lock window** on the tab) to stop it moving and let clicks go through it. Hover the window to get the **Unlock** button back.
 - **Hide ready spells** shows only spells on cooldown, so the window is a queue. **Side by side** (on by default) lines the icons up in a row, soonest on the left. Untick it to stack them in a column.
 - **Only spells with a cooldown** (on by default) keeps spells like Fireball out of the list. Ranks of one spell show once.
+- Click an icon to cast that spell. In combat the game doesn't let addons move clickable buttons, so the order freezes until the fight ends. The timers keep counting.
+- **Hunters** get two small icons at the top of the window, each with its own checkbox on the tab. **Show aspect** shows the aspect you have on, or a red question mark when none is. **Show Growl** shows your pet's Growl with a green border when autocast is on and red when it's off. Click it to switch autocast.
 - Each character has its own spells and window.
 
 | Command | What it does |
@@ -50,6 +52,7 @@ A built-in **CDs** tab in the QoL window, and a small window of cooldown timers.
 | `/qol cds show` / `hide` | Show or hide the window |
 | `/qol cds lock` / `unlock` | Stop or allow moving and resizing |
 | `/qol cds reset` | Move the window back near the centre |
+| `/qol cds debug` | Print what QoL reads for each tracked spell, to help fix a missing timer |
 
 ### Fishing (`/qol fish`)
 
@@ -78,7 +81,7 @@ Shows your threat on the enemy you have targeted, as a small number just above t
 
 ### Misc tab
 
-A built-in tab in the QoL window with on/off switches and settings, in sections: **Threat** (target frame and nameplate %), **Pet health** (the warning, its parts and both levels; the parts dim when the warning is off), **Map** (zeppelin, boat and flight master pins), **Window** (how see-through the background is; the text and border stay solid) and **Action bar** (hide the gryphons on either end of the main action bar).
+A built-in tab in the QoL window with on/off switches and settings, in sections: **Threat** (target frame and nameplate %), **Pet health** (the warning, its parts and both levels; the parts dim when the warning is off), **Map** (zeppelin, boat and flight master pins), **Window** (how see-through the background is; the text and border stay solid) **Action bar** (hide the gryphons on either end of the main action bar) and **Tooltips** (vendor sell price on item tooltips).
 
 - A small face and your % to pull aggro: `100%` means you pull (or already have it). The face and number follow the game's threat colours: grey, yellow when you are close to pulling, orange, then red when the mob is on you. The face smiles while your threat is low, goes to a flat mouth when you are close (yellow and orange), and opens its mouth once the mob is on you.
 - It reads the game's own threat API (`UnitDetailedThreatSituation`). If the client doesn't have it, QoL uses LibThreatClassic2 when another addon (such as Details! or ThreatClassic2) ships it. With neither, nothing is shown.
@@ -118,6 +121,17 @@ Makes it obvious when your pet (hunter pet or warlock demon) is close to dying.
 ### Action bar gryphons (`/qol gryphons`)
 
 Hides the two gryphon pictures on the left and right ends of the main action bar. Turn it on with the checkbox in the **Action bar** section of the Misc tab, or type `/qol gryphons` (also `on` / `off`). It takes effect straight away, works in combat, and doesn't touch your buttons or keybinds. Untick it to bring them back. `/qol gryphons debug` prints how many end caps QoL found, if they ever don't disappear.
+
+### Vendor price (`/qol price`)
+
+Adds an item's vendor sell price, in gold, silver and copper, to its tooltip. On by default. The game only shows it while a vendor window is open; QoL shows it everywhere else: your bags, bank, character sheet, loot window, chat links and the comparison tooltips.
+
+- A stack shows the price of the whole stack (with the count) and of one item.
+- Items vendors won't buy get no line.
+- At a vendor the game shows its own price, so QoL adds nothing there. It also adds nothing to a tooltip that already shows a price, so you never see it twice.
+- The first time you hover an item your client hasn't loaded yet, the price is added a moment later, once the game has it.
+
+Turn it off with the checkbox in the **Tooltips** section of the Misc tab, or with `/qol price` (also `on` / `off`).
 
 ### Zeppelins (`/qol zeppelins`)
 

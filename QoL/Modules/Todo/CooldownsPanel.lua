@@ -9,7 +9,7 @@ local T = ns.Todo
 local SCROLLBAR_SPACE = 24
 local ROW_HEIGHT, ICON_SIZE = 24, 20
 local CHECK_SIZE = 24
-local OPTIONS_HEIGHT = 2 * CHECK_SIZE + 34 -- two rows of checkboxes, then the size slider
+local SLIDER_SPACE = 34
 local SEARCH_HEIGHT = 26
 local BOTTOM_BAR = 26
 
@@ -175,11 +175,25 @@ function T:CreateCooldownsPanel(parent)
         createOption(panel, "sideBySide", "Side by side",
             "Lines the icons up in a row, soonest first from the left. Untick it to stack them in a column."),
     }
+    -- Hunters get a third row: the aspect and Growl icons in the window's header.
+    local _, class = UnitClass("player")
+    if class == "HUNTER" then
+        table.insert(panel.options, createOption(panel, "showAspect", "Show aspect",
+            "Shows the aspect you have on as a small icon at the top of the window. "
+            .. "A red question mark means no aspect is on."))
+        table.insert(panel.options, createOption(panel, "showGrowl", "Show Growl",
+            "Shows your pet's Growl at the top of the window with a green border when autocast is on "
+            .. "and red when it's off. Click it to switch autocast."))
+    end
+    local rows = math.ceil(#panel.options / 2)
+    local OPTIONS_HEIGHT = rows * CHECK_SIZE + SLIDER_SPACE
     panel.options[1]:SetPoint("TOPLEFT", panel, "TOPLEFT", 0, 0)
-    panel.options[3]:SetPoint("TOPLEFT", panel.options[1], "BOTTOMLEFT", 0, 2)
+    for i = 3, #panel.options, 2 do
+        panel.options[i]:SetPoint("TOPLEFT", panel.options[i - 2], "BOTTOMLEFT", 0, 2)
+    end
 
     panel.size = createSizeSlider(panel)
-    panel.size:SetPoint("TOPLEFT", panel, "TOPLEFT", 6, -2 * CHECK_SIZE)
+    panel.size:SetPoint("TOPLEFT", panel, "TOPLEFT", 6, -rows * CHECK_SIZE)
     panel.size:SetPoint("RIGHT", panel, "RIGHT", -16, 0)
 
     local search = CreateFrame("EditBox", nil, panel, "InputBoxTemplate")
