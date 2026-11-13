@@ -81,7 +81,7 @@ Shows your threat on the enemy you have targeted, as a small number just above t
 
 ### Misc tab
 
-A built-in tab in the QoL window with on/off switches and settings, in sections: **Threat** (target frame and nameplate %), **Pet health** (the warning, its parts and both levels; the parts dim when the warning is off), **Map** (zeppelin, boat and flight master pins), **Window** (how see-through the background is; the text and border stay solid) and **Action bar** (hide the gryphons on either end of the main action bar).
+A built-in tab in the QoL window with on/off switches and settings, in sections: **Threat** (target frame and nameplate %), **Pet health** (the warning, its parts and both levels; the parts dim when the warning is off), **Map** (zeppelin, boat and flight master pins), **Window** (how see-through the background is; the text and border stay solid) **Action bar** (hide the gryphons on either end of the main action bar) and **Trinkets** (the trinket window and its lock).
 
 - A small face and your % to pull aggro: `100%` means you pull (or already have it). The face and number follow the game's threat colours: grey, yellow when you are close to pulling, orange, then red when the mob is on you. The face smiles while your threat is low, goes to a flat mouth when you are close (yellow and orange), and opens its mouth once the mob is on you.
 - It reads the game's own threat API (`UnitDetailedThreatSituation`). If the client doesn't have it, QoL uses LibThreatClassic2 when another addon (such as Details! or ThreatClassic2) ships it. With neither, nothing is shown.
@@ -121,6 +121,21 @@ Makes it obvious when your pet (hunter pet or warlock demon) is close to dying.
 ### Action bar gryphons (`/qol gryphons`)
 
 Hides the two gryphon pictures on the left and right ends of the main action bar. Turn it on with the checkbox in the **Action bar** section of the Misc tab, or type `/qol gryphons` (also `on` / `off`). It takes effect straight away, works in combat, and doesn't touch your buttons or keybinds. Untick it to bring them back. `/qol gryphons debug` prints how many end caps QoL found, if they ever don't disappear.
+
+### Trinkets (`/qol trinkets`)
+
+A small window with your two trinket slots, off until you tick it in the **Trinkets** section of the Misc tab (or type `/qol trinkets`).
+
+- Click a slot to use that trinket. Its cooldown shows as a sweep on the icon.
+- Hover a slot to open a menu of the trinkets in your bags, then click one to put it in that slot. Hover one in the menu to see its tooltip.
+- The game doesn't allow changing trinkets in combat. A trinket you pick in combat is queued: it shows in the corner of the slot with a gold border, and goes in as soon as combat ends. Pick it again to cancel.
+- Drag the window to move it. Tick **Lock the trinket window in place** to stop that and hide its background; the buttons still work. Showing, hiding or moving the window waits until combat ends.
+
+| Command | What it does |
+| --- | --- |
+| `/qol trinkets` / `on` / `off` | Show or hide the window |
+| `/qol trinkets lock` / `unlock` | Lock or unlock the window |
+| `/qol trinkets reset` | Move the window back below the centre of the screen |
 
 ### Zeppelins (`/qol zeppelins`)
 
