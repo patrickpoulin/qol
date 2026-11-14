@@ -19,7 +19,7 @@ read_globals = {
     "UIDropDownMenu_Initialize", "UIDropDownMenu_CreateInfo",
     "UIDropDownMenu_AddButton", "ToggleDropDownMenu",
     -- Items, gear and combat
-    "GetInventoryItemID", "GetInventoryItemLink", "GetWeaponEnchantInfo",
+    "GetInventoryItemID", "GetInventoryItemLink", "GetInventoryItemTexture", "GetInventoryItemCooldown", "GetWeaponEnchantInfo",
     "InCombatLockdown", "C_Timer", "ClearCursor", "PickupInventoryItem", "GetBuildInfo",
     "GetCVar", "SetCVar", "UnitChannelInfo", "ClearOverrideBindings",
     "SetOverrideBinding", "SetOverrideBindingClick",

@@ -14,7 +14,7 @@ An on-screen to-do list.
 - Use as many tabs as you like. Click `+` to add one, double-click a tab to rename it, and right-click a tab to rename or delete it.
 - Click a task to edit it, tick it when it's done, or click `x` to delete it.
 - `/qol todo clear` deletes every ticked task on the current tab.
-- A built-in **Campfires** tab lists WoW Forever camp objects and how campfires work. It can't be renamed, deleted or given tasks.
+- A built-in **Campfires** tab lists every WoW Forever camp object by profession, with the skill 20, 140 and 300 tiers and what each one does, plus how campfires work. It can't be renamed, deleted or given tasks.
 - Lists are shared by all your characters. Each character remembers its own window position.
 
 | Command | What it does |
@@ -29,6 +29,30 @@ An on-screen to-do list.
 | `/qol todo collapse` / `expand` | Collapse or expand the window |
 | `/qol todo lock` / `unlock` | Stop or allow moving and resizing |
 | `/qol todo reset` | Move the window back to the centre |
+
+### Cooldowns (`/qol cds`)
+
+A built-in **CDs** tab in the QoL window, and a small window of cooldown timers.
+
+- Tick any spells and racials from your spellbook on the CDs tab (search box at the top). Each one shows in the cooldown window as its icon with the time left on top.
+- The window is sorted so you can see what's next: ready spells at the top, then spells on cooldown with the one coming back soonest first. Icons on cooldown are greyed out, and the timer turns yellow in the last 5 seconds.
+- Drag the window (or any icon) to move it. For fine placement, hover over the unlocked window and press the arrow keys to move it 1 pixel at a time (10 with Shift). Other keys still work as normal. Drag its bottom-right corner (or use the **Icon size** slider) to make the whole box bigger or smaller.
+- Click **Lock** on the window (or tick **Lock window** on the tab) to stop it moving and let clicks go through it. Hover the window to get the **Unlock** button back.
+- **Hide ready spells** shows only spells on cooldown, so the window is a queue. **Side by side** (on by default) lines the icons up in a row, soonest on the left. Untick it to stack them in a column.
+- **Only spells with a cooldown** (on by default) keeps spells like Fireball out of the list. Ranks of one spell show once.
+- Click an icon to cast that spell. In combat the game doesn't let addons move clickable buttons, so the order freezes until the fight ends. The timers keep counting.
+- **Hunters** get two small icons at the top of the window, each with its own checkbox on the tab. **Show aspect** shows the aspect you have on, or a red question mark when none is. **Show Growl** shows your pet's Growl with a green border when autocast is on and red when it's off. Click it to switch autocast.
+- Each character has its own spells and window.
+
+| Command | What it does |
+| --- | --- |
+| `/qol cds` | Open the CDs tab |
+| `/qol cds add <spell>` / `remove <spell>` | Track or stop tracking a spell |
+| `/qol cds list` | Print the spells you track |
+| `/qol cds show` / `hide` | Show or hide the window |
+| `/qol cds lock` / `unlock` | Stop or allow moving and resizing |
+| `/qol cds reset` | Move the window back near the centre |
+| `/qol cds debug` | Print what QoL reads for each tracked spell, to help fix a missing timer |
 
 ### Fishing (`/qol fish`)
 
@@ -57,7 +81,7 @@ Shows your threat on the enemy you have targeted, as a small number just above t
 
 ### Misc tab
 
-A built-in tab in the QoL window with on/off switches and settings, in sections: **Threat** (target frame and nameplate %), **Pet health** (the warning, its parts and both levels; the parts dim when the warning is off), **Map** (zeppelin, boat and flight master pins), **Window** (how see-through the background is; the text and border stay solid) and **Action bar** (hide the gryphons on either end of the main action bar).
+A built-in tab in the QoL window with on/off switches and settings, in sections: **Threat** (target frame and nameplate %), **Pet health** (the warning, its parts and both levels; the parts dim when the warning is off), **Map** (zeppelin, boat and flight master pins), **Window** (how see-through the background is; the text and border stay solid) **Action bar** (hide the gryphons on either end of the main action bar), **Trinkets** (the trinket window and its lock) and **Tooltips** (damage and healing per mana on spells).
 
 - A small face and your % to pull aggro: `100%` means you pull (or already have it). The face and number follow the game's threat colours: grey, yellow when you are close to pulling, orange, then red when the mob is on you. The face smiles while your threat is low, goes to a flat mouth when you are close (yellow and orange), and opens its mouth once the mob is on you.
 - It reads the game's own threat API (`UnitDetailedThreatSituation`). If the client doesn't have it, QoL uses LibThreatClassic2 when another addon (such as Details! or ThreatClassic2) ships it. With neither, nothing is shown.
@@ -94,9 +118,34 @@ Makes it obvious when your pet (hunter pet or warlock demon) is close to dying.
 | `/qol pet glow` / `sound` / `text` / `screen` `on` / `off` | Turn one part on or off |
 | `/qol pet debug` | Print your pet's health and what the warning sees |
 
+### Damage per mana (`/qol dpm`)
+
+Adds a **Damage per mana** line (and **Healing per mana** for heals) to the tooltip of any spell that costs mana, in your spellbook, on your action bars and in chat links. For example Fireball shows `Damage per mana: 2.06 (710 / 345 mana)`.
+
+- The numbers come from the tooltip itself: its mana cost and the damage or healing in its description.
+- A range like `561 to 715` counts as its middle. Damage or healing over time counts in full, so Fireball's burn is included. Spells that tick (`24 damage each second for 3 sec`, `98 every 2 seconds for 10 sec`) count every tick.
+- Spells that do both, like Holy Nova, show both lines. Shields (`absorbing 48 damage`) and spells with no damage or healing number get no line.
+- Like the game's tooltip, it uses base numbers and doesn't add your spell power. It reads English tooltip text.
+- On by default. Turn it off with the checkbox in the **Tooltips** section of the Misc tab, or type `/qol dpm` (also `on` / `off`).
+
 ### Action bar gryphons (`/qol gryphons`)
 
 Hides the two gryphon pictures on the left and right ends of the main action bar. Turn it on with the checkbox in the **Action bar** section of the Misc tab, or type `/qol gryphons` (also `on` / `off`). It takes effect straight away, works in combat, and doesn't touch your buttons or keybinds. Untick it to bring them back. `/qol gryphons debug` prints how many end caps QoL found, if they ever don't disappear.
+
+### Trinkets (`/qol trinkets`)
+
+A small window with your two trinket slots, off until you tick it in the **Trinkets** section of the Misc tab (or type `/qol trinkets`).
+
+- Click a slot to use that trinket. Its cooldown shows as a sweep on the icon.
+- Hover a slot to open a menu of the trinkets in your bags, then click one to put it in that slot. Hover one in the menu to see its tooltip.
+- The game doesn't allow changing trinkets in combat. A trinket you pick in combat is queued: it shows in the corner of the slot with a gold border, and goes in as soon as combat ends. Pick it again to cancel.
+- Drag the window to move it. Tick **Lock the trinket window in place** to stop that and hide its background; the buttons still work. Showing, hiding or moving the window waits until combat ends.
+
+| Command | What it does |
+| --- | --- |
+| `/qol trinkets` / `on` / `off` | Show or hide the window |
+| `/qol trinkets lock` / `unlock` | Lock or unlock the window |
+| `/qol trinkets reset` | Move the window back below the centre of the screen |
 
 ### Zeppelins (`/qol zeppelins`)
 

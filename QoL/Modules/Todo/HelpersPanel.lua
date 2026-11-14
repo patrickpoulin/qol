@@ -156,6 +156,35 @@ local HELPERS = {
         get = function() return ns.ActionBar.db.hideGryphons end,
         set = function(on) ns.ActionBar:SetHideGryphons(on) end,
     },
+
+    { kind = "header", label = "Trinkets" },
+    {
+        label = "Show a trinket window to use and swap trinkets",
+        tooltip = "A small window with your two trinket slots. Click a slot to use that trinket. "
+            .. "Hover a slot to see the trinkets in your bags, and click one to put it in that slot. "
+            .. "In combat the swap waits until combat ends. Type /qol trinkets reset to move it back.",
+        get = function() return ns.Trinkets.db.enabled end,
+        set = function(on) ns.Trinkets:SetEnabled(on) end,
+    },
+    {
+        indent = true, enabledIf = function() return ns.Trinkets.db.enabled end,
+        label = "Lock the trinket window in place",
+        tooltip = "Stops the window from being dragged and hides its background. "
+            .. "The trinket buttons still work.",
+        get = function() return ns.Trinkets.charDB.locked end,
+        set = function(on) ns.Trinkets:SetLocked(on) end,
+    },
+
+    { kind = "header", label = "Tooltips" },
+    {
+        label = "Show damage and healing per mana on spell tooltips",
+        tooltip = "Adds a Damage per mana or Healing per mana line to spells that cost mana, "
+            .. "worked out from the damage, healing and mana cost the tooltip shows. "
+            .. "Ranges use the middle, and over-time effects count in full. "
+            .. "Like the tooltip, it doesn't include spell power. Type /qol dpm to switch it from chat.",
+        get = function() return ns.SpellEfficiency.db.enabled end,
+        set = function(on) ns.SpellEfficiency:SetEnabled(on) end,
+    },
 }
 
 local function setTooltip(frame, helper)
