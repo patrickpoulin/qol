@@ -174,6 +174,17 @@ local HELPERS = {
         get = function() return ns.Trinkets.charDB.locked end,
         set = function(on) ns.Trinkets:SetLocked(on) end,
     },
+
+    { kind = "header", label = "Tooltips" },
+    {
+        label = "Show damage and healing per mana on spell tooltips",
+        tooltip = "Adds a Damage per mana or Healing per mana line to spells that cost mana, "
+            .. "worked out from the damage, healing and mana cost the tooltip shows. "
+            .. "Ranges use the middle, and over-time effects count in full. "
+            .. "Like the tooltip, it doesn't include spell power. Type /qol dpm to switch it from chat.",
+        get = function() return ns.SpellEfficiency.db.enabled end,
+        set = function(on) ns.SpellEfficiency:SetEnabled(on) end,
+    },
 }
 
 local function setTooltip(frame, helper)
