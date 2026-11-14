@@ -14,11 +14,6 @@ local function tier(skill, name, effect)
 end
 
 local PROFESSIONS = table.concat({
-    h("Camp Objects"),
-    "Each profession has three camp objects, at skill 20, 140 and 300.",
-    "Skill 20 is trained (trainer or the Camping 101 quest). 140 and 300 are blueprints from dungeons and raids.",
-    "A higher tier replaces the one below at your camp and keeps its buff, so 140 and 300 add something on top.",
-    "",
     p("Alchemy"),
     tier(20, "Mana Well", "mana every 5 sec"),
     tier(140, "Fermenter", "makes some reagents"),
@@ -69,6 +64,11 @@ local PROFESSIONS = table.concat({
     tier(220, "Expert Campfire", "holds 10 objects"),
     tier(140, "Cookie's Feast", "Stamina food"),
     tier(300, "Iron Oven", "crafting station for top recipes"),
+    "",
+    h("Camp Objects"),
+    "Each profession has three camp objects, at skill 20, 140 and 300.",
+    "Skill 20 is trained (trainer or the Camping 101 quest). 140 and 300 are blueprints from dungeons and raids.",
+    "A higher tier replaces the one below at your camp and keeps its buff, so 140 and 300 add something on top.",
     "",
     h("Campfires"),
     "Cooking 1 unlocks a Basic Campfire.",
