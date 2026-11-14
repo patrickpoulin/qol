@@ -235,10 +235,34 @@ local hooked = {}
 local function hookCleared(tooltip)
     if hooked[tooltip] or not tooltip.HookScript then return end
     hooked[tooltip] = true
-    tooltip:HookScript("OnTooltipCleared", function(t) t.qolDpmDone = nil end)
+    tooltip:HookScript("OnTooltipCleared", function(t) t.qolDpmDone, t.qolDpmSpell = nil, nil end)
 end
 
+-- Mana cost, damage, healing and bonus flag from a spell tooltip's lines.
+local function readLines(lines, spellID)
+    local cost = manaCost(lines, spellID)
+    -- Line 1 is the spell name; the rest holds cost, cast time and the description.
+    local damage, heal, bonus = S.ParseAmounts(table.concat(lines, "\n", 2))
+    return cost, damage, heal, bonus
+end
+
+-- Adds the per-mana lines for one spell. prefix ("Arcane Shot: ") names the
+-- spell when the tooltip is a macro's. Returns true if it added anything.
+local function addSpellLines(tooltip, cost, damage, heal, bonus, prefix)
+    if not cost or cost <= 0 or (damage <= 0 and heal <= 0) then return false end
+    prefix = prefix or ""
+    if damage > 0 then
+        -- A weapon attack's bonus is only part of its damage, so say so.
+        addLine(tooltip, prefix .. (bonus and "Bonus damage per mana" or "Damage per mana"), damage, cost)
+    end
+    if heal > 0 then addLine(tooltip, prefix .. "Healing per mana", heal, cost) end
+    return true
+end
+
+local scanTip
+
 local function onSpell(tooltip)
+    if tooltip == scanTip then return end
     hookCleared(tooltip)
     if not S.db.enabled or tooltip.qolDpmDone then return end
     if not (tooltip.NumLines and tooltip.AddLine) then return end
@@ -249,26 +273,124 @@ local function onSpell(tooltip)
     end
     local lines = tooltipLines(tooltip)
     if #lines < 2 then return end
-    local cost = manaCost(lines, spellID)
-    -- Line 1 is the spell name; the rest holds cost, cast time and the description.
-    local damage, heal, bonus = S.ParseAmounts(table.concat(lines, "\n", 2))
+    local cost, damage, heal, bonus = readLines(lines, spellID)
     S.last = { lines = lines, cost = cost, damage = damage, heal = heal, bonus = bonus,
         when = _G.GetTime and _G.GetTime() }
-    if not cost or cost <= 0 then return end
-    if damage <= 0 and heal <= 0 then return end
-    tooltip.qolDpmDone = true
-    if damage > 0 then
-        -- A weapon attack's bonus is only part of its damage, so say so.
-        addLine(tooltip, bonus and "Bonus damage per mana" or "Damage per mana", damage, cost)
+    if addSpellLines(tooltip, cost, damage, heal, bonus) then
+        tooltip.qolDpmDone = true
+        tooltip.qolDpmSpell = lines[1]
+        tooltip:Show() -- resize to fit the new lines
     end
-    if heal > 0 then addLine(tooltip, "Healing per mana", heal, cost) end
-    tooltip:Show() -- resize to fit the new lines
+end
+
+-- Macros ---------------------------------------------------------------
+
+-- The spell names a macro casts, in order, without repeats: every option
+-- of /cast and /use ("[mod:shift] Multi-Shot; Arcane Shot") and every step
+-- of /castsequence. Ranks like "Arcane Shot(Rank 3)" are kept.
+function S.MacroSpellNames(body)
+    local names, seen = {}, {}
+    local function add(name)
+        name = name:gsub("%b[]", ""):gsub("^%s*!?", ""):gsub("%s+$", "")
+        if name ~= "" and not seen[name:lower()] then
+            seen[name:lower()] = true
+            table.insert(names, name)
+        end
+    end
+    for line in (body or ""):gmatch("[^\r\n]+") do
+        local cmd, rest = line:match("^%s*/(%a+)%s+(.+)$")
+        cmd = cmd and cmd:lower()
+        if cmd == "cast" or cmd == "use" or cmd == "castrandom" then
+            local splitOn = cmd == "castrandom" and "[^,]+" or "[^;]+"
+            for part in rest:gmatch(splitOn) do add(part) end
+        elseif cmd == "castsequence" then
+            for part in rest:gmatch("[^;]+") do
+                part = part:gsub("%b[]", ""):gsub("reset=%S+", "")
+                for step in part:gmatch("[^,]+") do add(step) end
+            end
+        end
+    end
+    return names
+end
+
+-- Spell ID for a name the player knows, or nil (items, unknown spells).
+local function spellIDFor(name)
+    local C_Spell = _G.C_Spell
+    if C_Spell and C_Spell.GetSpellInfo then
+        local ok, info = pcall(C_Spell.GetSpellInfo, name)
+        if ok and type(info) == "table" and info.spellID then return info.spellID end
+    end
+    if _G.GetSpellInfo then
+        local ok, _, _, _, _, _, _, id = pcall(_G.GetSpellInfo, name)
+        if ok and type(id) == "number" then return id end
+    end
+    return nil
+end
+
+-- The lines of a spell's tooltip, read from a hidden tooltip of our own.
+local function spellTooltipLines(spellID)
+    if not scanTip then
+        scanTip = CreateFrame("GameTooltip", "QoLDpmScanTooltip", nil, "GameTooltipTemplate")
+    end
+    scanTip:SetOwner(_G.WorldFrame or UIParent, "ANCHOR_NONE")
+    scanTip:ClearLines()
+    if scanTip.SetSpellByID then
+        scanTip:SetSpellByID(spellID)
+    else
+        return {}
+    end
+    local lines = tooltipLines(scanTip)
+    scanTip:Hide()
+    return lines
+end
+
+-- Adds a line for each spell the macro on this action slot casts.
+local function onMacroAction(tooltip, slot)
+    if not S.db.enabled or tooltip == scanTip or not slot then return end
+    if not (_G.GetActionInfo and _G.GetMacroInfo) then return end
+    local kind, id = _G.GetActionInfo(slot)
+    if kind ~= "macro" or not id then return end
+    local _, _, body = _G.GetMacroInfo(id)
+    local names = S.MacroSpellNames(body)
+    if #names == 0 and _G.GetMacroSpell then
+        local spell = _G.GetMacroSpell(id)
+        if type(spell) == "number" then
+            local info = _G.C_Spell and _G.C_Spell.GetSpellInfo and _G.C_Spell.GetSpellInfo(spell)
+            spell = type(info) == "table" and info.name or (_G.GetSpellInfo and _G.GetSpellInfo(spell))
+        end
+        if type(spell) == "string" then names = { spell } end
+    end
+    if #names == 0 then return end
+    hookCleared(tooltip)
+
+    local added = false
+    local found = {}
+    for _, name in ipairs(names) do
+        local spellID = spellIDFor(name)
+        local lines = spellID and spellTooltipLines(spellID) or {}
+        -- A #showtooltip macro already shows one spell's tooltip, and the
+        -- spell hooks may have added its line; don't add it twice.
+        if #lines >= 2 and lines[1] ~= tooltip.qolDpmSpell then
+            local cost, damage, heal, bonus = readLines(lines, spellID)
+            table.insert(found, ("%s: mana %s, damage %s%s, healing %s"):format(lines[1], tostring(cost),
+                tostring(damage), bonus and " (bonus)" or "", tostring(heal)))
+            if addSpellLines(tooltip, cost, damage, heal, bonus, lines[1] .. " - ") then added = true end
+        else
+            table.insert(found, ("%s: %s"):format(name, spellID and "already shown" or "not a known spell"))
+        end
+    end
+    S.last = { macro = body, found = found, when = _G.GetTime and _G.GetTime() }
+    if added then
+        tooltip.qolDpmDone = true
+        tooltip:Show()
+    end
 end
 
 local TOOLTIPS = { "GameTooltip", "ItemRefTooltip" }
 
 function S:OnEnable()
     local handler = QoL:Guard("Damage per mana", onSpell)
+    local macroHandler = QoL:Guard("Damage per mana", onMacroAction)
     for _, name in ipairs(TOOLTIPS) do
         local tooltip = _G[name]
         if tooltip and tooltip.HasScript and tooltip:HasScript("OnTooltipSetSpell") then
@@ -282,7 +404,10 @@ function S:OnEnable()
     for _, name in ipairs(TOOLTIPS) do
         local tooltip = _G[name]
         if tooltip and tooltip.SetAction then
-            hooksecurefunc(tooltip, "SetAction", function(t) handler(t) end)
+            hooksecurefunc(tooltip, "SetAction", function(t, slot)
+                handler(t)
+                macroHandler(t, slot)
+            end)
         end
     end
     -- Newer clients build tooltips from data and dropped OnTooltipSetSpell.
@@ -313,6 +438,12 @@ function S:OnSlash(args)
             return
         end
         local ago = (last.when and _G.GetTime) and (" %ds ago"):format(_G.GetTime() - last.when) or ""
+        if last.macro then
+            QoL:Print(("last tooltip was a macro%s:"):format(ago))
+            for line in last.macro:gmatch("[^\r\n]+") do print("  | " .. line) end
+            for _, text in ipairs(last.found) do print("  " .. text) end
+            return
+        end
         QoL:Print(("last spell tooltip%s: mana %s, damage %s%s, healing %s"):format(ago, tostring(last.cost),
             tostring(last.damage), last.bonus and " (bonus)" or "", tostring(last.heal)))
         for i, text in ipairs(last.lines) do print(("  %d: %s"):format(i, text)) end
