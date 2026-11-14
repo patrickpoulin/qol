@@ -81,7 +81,7 @@ Shows your threat on the enemy you have targeted, as a small number just above t
 
 ### Misc tab
 
-A built-in tab in the QoL window with on/off switches and settings, in sections: **Threat** (target frame and nameplate %), **Pet health** (the warning, its parts and both levels; the parts dim when the warning is off), **Map** (zeppelin, boat and flight master pins), **Window** (how see-through the background is; the text and border stay solid) **Action bar** (hide the gryphons on either end of the main action bar) and **Trinkets** (the trinket window and its lock).
+A built-in tab in the QoL window with on/off switches and settings, in sections: **Threat** (target frame and nameplate %), **Pet health** (the warning, its parts and both levels; the parts dim when the warning is off), **Map** (zeppelin, boat and flight master pins), **Window** (how see-through the background is; the text and border stay solid) **Action bar** (hide the gryphons on either end of the main action bar), **Trinkets** (the trinket window and its lock) and **Tooltips** (damage and healing per mana on spells).
 
 - A small face and your % to pull aggro: `100%` means you pull (or already have it). The face and number follow the game's threat colours: grey, yellow when you are close to pulling, orange, then red when the mob is on you. The face smiles while your threat is low, goes to a flat mouth when you are close (yellow and orange), and opens its mouth once the mob is on you.
 - It reads the game's own threat API (`UnitDetailedThreatSituation`). If the client doesn't have it, QoL uses LibThreatClassic2 when another addon (such as Details! or ThreatClassic2) ships it. With neither, nothing is shown.
@@ -117,6 +117,16 @@ Makes it obvious when your pet (hunter pet or warlock demon) is close to dying.
 | `/qol pet danger <%>` | Set the danger level |
 | `/qol pet glow` / `sound` / `text` / `screen` `on` / `off` | Turn one part on or off |
 | `/qol pet debug` | Print your pet's health and what the warning sees |
+
+### Damage per mana (`/qol dpm`)
+
+Adds a **Damage per mana** line (and **Healing per mana** for heals) to the tooltip of any spell that costs mana, in your spellbook, on your action bars and in chat links. For example Fireball shows `Damage per mana: 2.06 (710 / 345 mana)`.
+
+- The numbers come from the tooltip itself: its mana cost and the damage or healing in its description.
+- A range like `561 to 715` counts as its middle. Damage or healing over time counts in full, so Fireball's burn is included. Spells that tick (`24 damage each second for 3 sec`, `98 every 2 seconds for 10 sec`) count every tick.
+- Spells that do both, like Holy Nova, show both lines. Shields (`absorbing 48 damage`) and spells with no damage or healing number get no line.
+- Like the game's tooltip, it uses base numbers and doesn't add your spell power. It reads English tooltip text.
+- On by default. Turn it off with the checkbox in the **Tooltips** section of the Misc tab, or type `/qol dpm` (also `on` / `off`).
 
 ### Action bar gryphons (`/qol gryphons`)
 
