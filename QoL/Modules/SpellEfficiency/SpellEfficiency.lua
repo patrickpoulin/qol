@@ -22,6 +22,7 @@ local S = QoL:RegisterModule("dpm", {
     },
     slashHelp = {
         "/qol dpm - turn damage/healing per mana on spell tooltips on or off (or /qol dpm on / off)",
+        "/qol dpm debug - print what QoL read from the last spell you hovered",
     },
 })
 ns.SpellEfficiency = S
@@ -95,29 +96,76 @@ local function tickCount(clause)
     return 1
 end
 
--- Sum of the amounts in a clause. With beforeDamage, only numbers followed
--- by "damage" (with at most one word, the school, in between) count;
--- otherwise every number that isn't a time, distance, %, count or level.
-local function clauseAmount(clause, beforeDamage)
+-- Words that can sit between a number and "damage" in "15 additional
+-- Arcane damage" (at most two of them); any other word means the number
+-- isn't the damage.
+local DAMAGE_WORDS = {
+    additional = true, extra = true, bonus = true, ranged = true, melee = true, physical = true,
+    weapon = true, arcane = true, fire = true, frost = true, nature = true, shadow = true,
+    holy = true, chaos = true,
+}
+
+-- Flat damage in a damage clause. Returns the total and whether it is a
+-- bonus on top of the weapon hit ("an additional 80 damage", "increases
+-- ranged damage by 70", "weapon damage plus 45"), which hunter shots and
+-- similar attacks use. Percent-of-weapon damage has no flat number and adds 0.
+local function damageAmount(clause, hasEarlier)
+    clause = averageRanges(clause)
+    local total, bonus = 0, false
+    local pos = 1
+    while true do
+        local s, e, num = clause:find("(%d+%.?%d*)", pos)
+        if not s then break end
+        pos = e + 1
+        local value = tonumber(num) or 0
+        local before = clause:sub(1, s - 1)
+        local after = clause:sub(e + 1)
+        local counted = false
+        -- "<n> [word [word]] damage"
+        local w1, w2 = after:match("^%s+(%a+)%s+(%a+)%s+damage")
+        local w = after:match("^%s+(%a+)%s+damage")
+        if after:match("^%s+damage") then
+            counted = true
+        elseif w and (DAMAGE_WORDS[w] or not NOT_AMOUNT[w]) and w ~= "of" then
+            counted = true
+            if w == "additional" or w == "extra" or w == "bonus" then bonus = bonus or not hasEarlier end
+        elseif w1 and DAMAGE_WORDS[w1] and DAMAGE_WORDS[w2] then
+            counted = true
+            if w1 == "additional" or w1 == "extra" or w1 == "bonus" then bonus = bonus or not hasEarlier end
+        end
+        if counted and before:match("additional%s*$") then bonus = bonus or not hasEarlier end
+        -- "increases ranged damage by 70", "weapon damage plus 45"
+        if not counted and not after:match("^%s*%%") then
+            if before:match("increases? [%a ]-damage by%s*$") and not before:match("taken") then
+                counted, bonus = true, true
+            elseif before:match("damage plus%s*$") then
+                counted, bonus = true, true
+            end
+        end
+        if counted then
+            total = total + value
+            hasEarlier = hasEarlier or value > 0
+        end
+    end
+    return total * tickCount(clause), bonus
+end
+
+-- Sum of the healing (or inherited damage) amounts in a clause: every
+-- number that isn't a time, distance, %, count or level.
+local function clauseAmount(clause)
     clause = averageRanges(clause)
     local total = 0
-    if beforeDamage then
-        for num in clause:gmatch("(%d+%.?%d*) %a* ?damage") do
-            total = total + (tonumber(num) or 0)
-        end
-    else
-        local pos = 1
-        while true do
-            local s, e, num = clause:find("(%d+%.?%d*)", pos)
-            if not s then break end
-            pos = e + 1
-            local before = clause:sub(1, s - 1):match("(%a+)%s*$")
-            local after = clause:sub(e + 1)
-            local nextWord = after:match("^%s*(%a+)")
-            local skip = after:match("^%s*%%") or (nextWord and NOT_AMOUNT[nextWord])
-                or (before and NOT_AMOUNT_BEFORE[before])
-            if not skip then total = total + (tonumber(num) or 0) end
-        end
+    local pos = 1
+    while true do
+        local s, e, num = clause:find("(%d+%.?%d*)", pos)
+        if not s then break end
+        pos = e + 1
+        local before = clause:sub(1, s - 1):match("(%a+)%s*$")
+        local after = clause:sub(e + 1)
+        local nextWord = after:match("^%s*(%a+)")
+        local skip = after:match("^%s*%%") or (nextWord and NOT_AMOUNT[nextWord])
+            or (before and NOT_AMOUNT_BEFORE[before])
+        if not skip then total = total + (tonumber(num) or 0) end
     end
     return total * tickCount(clause)
 end
@@ -130,10 +178,11 @@ local function clauseKind(clause)
     return nil
 end
 
--- Total damage and healing in a spell's tooltip text (one line per "\n").
+-- Total damage and healing in a spell's tooltip text (one line per "\n"),
+-- and whether the damage is a bonus on top of a weapon hit.
 function S.ParseAmounts(text)
     text = text:lower():gsub("\n", "|"):gsub("%.%s", "|"):gsub("%.$", "")
-    local damage, heal = 0, 0
+    local damage, heal, bonus = 0, 0, false
     -- Sentences end at ". " (not "1.5") and at line breaks.
     for sentence in text:gmatch("[^|]+") do
         -- "Heals for 93 to 107 and another 98 over 21 sec": the second half
@@ -143,14 +192,18 @@ function S.ParseAmounts(text)
         for clause in sentence:gmatch("[^|]+") do
             local own = clauseKind(clause)
             kind = own or kind
-            if kind == "damage" then
-                damage = damage + clauseAmount(clause, own == "damage")
+            if kind == "damage" and own == "damage" then
+                local amount, isBonus = damageAmount(clause, damage > 0)
+                damage = damage + amount
+                bonus = bonus or isBonus
+            elseif kind == "damage" then
+                damage = damage + clauseAmount(clause)
             elseif kind == "heal" then
-                heal = heal + clauseAmount(clause, false)
+                heal = heal + clauseAmount(clause)
             end
         end
     end
-    return damage, heal
+    return damage, heal, bonus
 end
 
 -- The left-hand text of every line of a tooltip.
@@ -197,12 +250,16 @@ local function onSpell(tooltip)
     local lines = tooltipLines(tooltip)
     if #lines < 2 then return end
     local cost = manaCost(lines, spellID)
-    if not cost or cost <= 0 then return end
     -- Line 1 is the spell name; the rest holds cost, cast time and the description.
-    local damage, heal = S.ParseAmounts(table.concat(lines, "\n", 2))
+    local damage, heal, bonus = S.ParseAmounts(table.concat(lines, "\n", 2))
+    S.last = { lines = lines, cost = cost, damage = damage, heal = heal, bonus = bonus }
+    if not cost or cost <= 0 then return end
     if damage <= 0 and heal <= 0 then return end
     tooltip.qolDpmDone = true
-    if damage > 0 then addLine(tooltip, "Damage per mana", damage, cost) end
+    if damage > 0 then
+        -- A weapon attack's bonus is only part of its damage, so say so.
+        addLine(tooltip, bonus and "Bonus damage per mana" or "Damage per mana", damage, cost)
+    end
     if heal > 0 then addLine(tooltip, "Healing per mana", heal, cost) end
     tooltip:Show() -- resize to fit the new lines
 end
@@ -238,6 +295,16 @@ function S:OnSlash(args)
         self:SetEnabled(not self.db.enabled)
     elseif cmd == "on" or cmd == "off" then
         self:SetEnabled(cmd == "on")
+    elseif cmd == "debug" then
+        local last = self.last
+        if not last then
+            QoL:Print("hover a spell first, then type /qol dpm debug.")
+            return
+        end
+        QoL:Print(("last spell tooltip: mana %s, damage %s%s, healing %s"):format(tostring(last.cost),
+            tostring(last.damage), last.bonus and " (bonus)" or "", tostring(last.heal)))
+        for i, text in ipairs(last.lines) do print(("  %d: %s"):format(i, text)) end
+        return
     else
         QoL:Print("unknown command. Type /qol for help.")
         return
