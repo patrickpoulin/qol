@@ -30,6 +30,8 @@ local function captureKey(button, onDone)
         catcher:EnableKeyboard(true)
         catcher:SetPropagateKeyboardInput(false)
         button.catcher = catcher
+        -- Closing the window mid-capture gives the keyboard back.
+        button:HookScript("OnHide", function() catcher:Hide() end)
     end
     button:SetText("Press a Key...")
     catcher:Show()
