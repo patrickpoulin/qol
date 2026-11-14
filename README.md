@@ -124,9 +124,10 @@ Adds a **Damage per mana** line (and **Healing per mana** for heals) to the tool
 
 - The numbers come from the tooltip itself: its mana cost and the damage or healing in its description.
 - A range like `561 to 715` counts as its middle. Damage or healing over time counts in full, so Fireball's burn is included. Spells that tick (`24 damage each second for 3 sec`, `98 every 2 seconds for 10 sec`) count every tick.
+- Hunter shots and other weapon attacks only list a flat bonus on top of the weapon hit (`an additional 80 damage`, `increases ranged damage by 70`, `weapon damage plus 45`). Those show **Bonus damage per mana**, counting just that bonus. A shot that only lists a % of weapon damage has no number to count, so it gets no line.
 - Spells that do both, like Holy Nova, show both lines. Shields (`absorbing 48 damage`) and spells with no damage or healing number get no line.
 - Like the game's tooltip, it uses base numbers and doesn't add your spell power. It reads English tooltip text.
-- On by default. Turn it off with the checkbox in the **Tooltips** section of the Misc tab, or type `/qol dpm` (also `on` / `off`).
+- On by default. Turn it off with the checkbox in the **Tooltips** section of the Misc tab, or type `/qol dpm` (also `on` / `off`). If a spell shows no line or a wrong number, hover it and type `/qol dpm debug` to print what QoL read.
 
 ### Action bar gryphons (`/qol gryphons`)
 
