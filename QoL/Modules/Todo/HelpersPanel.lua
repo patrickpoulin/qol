@@ -156,6 +156,24 @@ local HELPERS = {
         get = function() return ns.ActionBar.db.hideGryphons end,
         set = function(on) ns.ActionBar:SetHideGryphons(on) end,
     },
+
+    { kind = "header", label = "Trinkets" },
+    {
+        label = "Show a trinket window to use and swap trinkets",
+        tooltip = "A small window with your two trinket slots. Click a slot to use that trinket. "
+            .. "Hover a slot to see the trinkets in your bags, and click one to put it in that slot. "
+            .. "In combat the swap waits until combat ends. Type /qol trinkets reset to move it back.",
+        get = function() return ns.Trinkets.db.enabled end,
+        set = function(on) ns.Trinkets:SetEnabled(on) end,
+    },
+    {
+        indent = true, enabledIf = function() return ns.Trinkets.db.enabled end,
+        label = "Lock the trinket window in place",
+        tooltip = "Stops the window from being dragged and hides its background. "
+            .. "The trinket buttons still work.",
+        get = function() return ns.Trinkets.charDB.locked end,
+        set = function(on) ns.Trinkets:SetLocked(on) end,
+    },
 }
 
 local function setTooltip(frame, helper)
