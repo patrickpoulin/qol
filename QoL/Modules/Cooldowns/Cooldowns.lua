@@ -395,25 +395,34 @@ end
 local NUDGE = { UP = { 0, 1 }, DOWN = { 0, -1 }, LEFT = { -1, 0 }, RIGHT = { 1, 0 } }
 
 -- While the window is unlocked and the mouse is over it, the arrow keys move
--- it 1 pixel (10 with Shift). Every other key still reaches the game. Off in
--- combat, where the game doesn't let addons hold on to keys.
-function C:UpdateKeyboard()
-    local f = self.frame
-    local want = not self.charDB.locked and f:IsShown() and f:IsMouseOver() and not InCombatLockdown()
-    if f.keyboard == want then return end
-    f.keyboard = want
-    if not want and not InCombatLockdown() then pcall(f.SetPropagateKeyboardInput, f, true) end
-    pcall(f.EnableKeyboard, f, want)
+-- it 1 pixel (10 with Shift). This borrows only the arrow keys, through
+-- override bindings, so no other key is ever held back from the game. Off in
+-- combat, where bindings can't change.
+local nudgeButton = CreateFrame("Button", "QoLCooldownsNudgeButton", UIParent)
+nudgeButton:Hide()
+local nudgeOwner = CreateFrame("Frame")
+
+function C:SetNudgeKeys(want)
+    if InCombatLockdown() or self.nudgeKeys == want then return end
+    self.nudgeKeys = want
+    ClearOverrideBindings(nudgeOwner)
+    if not want then return end
+    for key in pairs(NUDGE) do
+        SetOverrideBindingClick(nudgeOwner, true, key, "QoLCooldownsNudgeButton", key)
+        SetOverrideBindingClick(nudgeOwner, true, "SHIFT-" .. key, "QoLCooldownsNudgeButton", key)
+    end
 end
 
-function C:OnKeyDown(key)
+function C:UpdateKeyboard()
+    local f = self.frame
+    self:SetNudgeKeys(not self.charDB.locked and f:IsShown() and f:IsMouseOver() and not InCombatLockdown())
+end
+
+function C:OnNudgeKey(key)
     local step = NUDGE[key]
-    if InCombatLockdown() then return end
-    pcall(self.frame.SetPropagateKeyboardInput, self.frame, not step)
-    if step then
-        local n = IsShiftKeyDown() and 10 or 1
-        self:Nudge(step[1] * n, step[2] * n)
-    end
+    if not step or InCombatLockdown() then return end
+    local n = IsShiftKeyDown() and 10 or 1
+    self:Nudge(step[1] * n, step[2] * n)
 end
 
 function C:ResetPosition()
@@ -454,8 +463,7 @@ function C:CreateWindow()
         frame:StopMovingOrSizing()
         self:SavePosition()
     end)
-    if not InCombatLockdown() then pcall(f.SetPropagateKeyboardInput, f, true) end
-    f:SetScript("OnKeyDown", function(_, key) self:OnKeyDown(key) end)
+    nudgeButton:SetScript("OnClick", function(_, key) self:OnNudgeKey(key) end)
     f:SetScript("OnEnter", function(frame)
         if self.charDB.locked then return end
         GameTooltip:SetOwner(frame, "ANCHOR_TOP")
@@ -861,7 +869,7 @@ function C:OnEnable()
     local events = CreateFrame("Frame")
     -- Not every client has every event; registering an unknown one is an error.
     for _, event in ipairs({ "SPELLS_CHANGED", "LEARNED_SPELL_IN_TAB", "LEARNED_SPELL_IN_SKILL_LINE",
-        "PLAYER_REGEN_ENABLED" }) do
+        "PLAYER_REGEN_ENABLED", "PLAYER_REGEN_DISABLED" }) do
         pcall(events.RegisterEvent, events, event)
     end
     if not (events.RegisterUnitEvent and pcall(events.RegisterUnitEvent, events, "UNIT_SPELLCAST_SUCCEEDED", "player")) then
@@ -870,6 +878,9 @@ function C:OnEnable()
     events:SetScript("OnEvent", QoL:Guard("Cooldowns", function(_, event, unit, _, spellID)
         if event == "UNIT_SPELLCAST_SUCCEEDED" then
             if unit == "player" then self:OnSpellCast(spellID) end
+            return
+        elseif event == "PLAYER_REGEN_DISABLED" then
+            self:SetNudgeKeys(false) -- last chance before combat locks bindings
             return
         elseif event == "PLAYER_REGEN_ENABLED" then
             self:Changed() -- catch up on anything combat held back
