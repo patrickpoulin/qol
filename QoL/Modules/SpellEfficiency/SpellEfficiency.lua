@@ -252,7 +252,8 @@ local function onSpell(tooltip)
     local cost = manaCost(lines, spellID)
     -- Line 1 is the spell name; the rest holds cost, cast time and the description.
     local damage, heal, bonus = S.ParseAmounts(table.concat(lines, "\n", 2))
-    S.last = { lines = lines, cost = cost, damage = damage, heal = heal, bonus = bonus }
+    S.last = { lines = lines, cost = cost, damage = damage, heal = heal, bonus = bonus,
+        when = _G.GetTime and _G.GetTime() }
     if not cost or cost <= 0 then return end
     if damage <= 0 and heal <= 0 then return end
     tooltip.qolDpmDone = true
@@ -272,6 +273,16 @@ function S:OnEnable()
         local tooltip = _G[name]
         if tooltip and tooltip.HasScript and tooltip:HasScript("OnTooltipSetSpell") then
             tooltip:HookScript("OnTooltipSetSpell", handler)
+        end
+    end
+    -- Action bar buttons fill the tooltip with SetAction. Hook it straight
+    -- away so every bar and page is read from the tooltip it just built,
+    -- including slots the spell hooks below don't report (macros on some
+    -- clients). Anything that isn't a mana spell gets no line.
+    for _, name in ipairs(TOOLTIPS) do
+        local tooltip = _G[name]
+        if tooltip and tooltip.SetAction then
+            hooksecurefunc(tooltip, "SetAction", function(t) handler(t) end)
         end
     end
     -- Newer clients build tooltips from data and dropped OnTooltipSetSpell.
@@ -301,7 +312,8 @@ function S:OnSlash(args)
             QoL:Print("hover a spell first, then type /qol dpm debug.")
             return
         end
-        QoL:Print(("last spell tooltip: mana %s, damage %s%s, healing %s"):format(tostring(last.cost),
+        local ago = (last.when and _G.GetTime) and (" %ds ago"):format(_G.GetTime() - last.when) or ""
+        QoL:Print(("last spell tooltip%s: mana %s, damage %s%s, healing %s"):format(ago, tostring(last.cost),
             tostring(last.damage), last.bonus and " (bonus)" or "", tostring(last.heal)))
         for i, text in ipairs(last.lines) do print(("  %d: %s"):format(i, text)) end
         return
