@@ -203,6 +203,9 @@ function S.ParseAmounts(text)
             end
         end
     end
+    -- Damage that is all weapon ("150% weapon damage", "an additional 0
+    -- damage") has no flat number but is still a weapon attack.
+    if text:find("weapon damage") then bonus = true end
     return damage, heal, bonus
 end
 
@@ -249,8 +252,16 @@ end
 -- Adds the per-mana lines for one spell. prefix ("Arcane Shot: ") names the
 -- spell when the tooltip is a macro's. Returns true if it added anything.
 local function addSpellLines(tooltip, cost, damage, heal, bonus, prefix)
-    if not cost or cost <= 0 or (damage <= 0 and heal <= 0) then return false end
+    if not cost or cost <= 0 then return false end
     prefix = prefix or ""
+    if damage <= 0 and heal <= 0 then
+        -- A shot that only lists weapon damage: say so, so a blank tooltip
+        -- doesn't look like QoL missed it.
+        if not bonus then return false end
+        tooltip:AddLine(("%sDamage per mana: %sweapon damage only, no flat bonus|r"):format(prefix, DETAIL_COLOR),
+            COLOR[1], COLOR[2], COLOR[3])
+        return true
+    end
     if damage > 0 then
         -- A weapon attack's bonus is only part of its damage, so say so.
         addLine(tooltip, prefix .. (bonus and "Bonus damage per mana" or "Damage per mana"), damage, cost)
@@ -348,10 +359,24 @@ end
 local function onMacroAction(tooltip, slot)
     if not S.db.enabled or tooltip == scanTip or not slot then return end
     if not (_G.GetActionInfo and _G.GetMacroInfo) then return end
-    local kind, id = _G.GetActionInfo(slot)
+    local kind, id, subType = _G.GetActionInfo(slot)
     if kind ~= "macro" or not id then return end
-    local _, _, body = _G.GetMacroInfo(id)
+    -- Newer clients hand back the spell a #showtooltip macro shows (subType
+    -- "spell") instead of the macro's index, so find the macro by its name.
+    local body = select(3, _G.GetMacroInfo(id))
+    local macroName = _G.GetActionText and _G.GetActionText(slot)
+    if (subType == "spell" or not body) and macroName and _G.GetMacroIndexByName then
+        local index = _G.GetMacroIndexByName(macroName)
+        if index and index > 0 then body = select(3, _G.GetMacroInfo(index)) end
+    end
     local names = S.MacroSpellNames(body)
+    if #names == 0 and subType == "spell" and type(id) == "number" then
+        local info = _G.C_Spell and _G.C_Spell.GetSpellInfo and _G.C_Spell.GetSpellInfo(id)
+        local spell = type(info) == "table" and info.name or (_G.GetSpellInfo and _G.GetSpellInfo(id))
+        if type(spell) == "string" then names = { spell } end
+    end
+    S.last = { macro = body or ("(macro body not found: " .. tostring(kind) .. " " .. tostring(id)
+        .. " " .. tostring(subType) .. ")"), found = {}, when = _G.GetTime and _G.GetTime() }
     if #names == 0 and _G.GetMacroSpell then
         local spell = _G.GetMacroSpell(id)
         if type(spell) == "number" then
@@ -379,7 +404,7 @@ local function onMacroAction(tooltip, slot)
             table.insert(found, ("%s: %s"):format(name, spellID and "already shown" or "not a known spell"))
         end
     end
-    S.last = { macro = body, found = found, when = _G.GetTime and _G.GetTime() }
+    S.last.found = found
     if added then
         tooltip.qolDpmDone = true
         tooltip:Show()
