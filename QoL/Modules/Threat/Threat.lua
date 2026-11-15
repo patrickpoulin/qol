@@ -45,6 +45,12 @@ local T = QoL:RegisterModule("threat", {
 })
 ns.Threat = T
 
+-- A unit test that may come back as a secret value in instances; secret
+-- counts as false so we show nothing rather than erroring.
+local function yes(v)
+    return not QoL.IsSecret(v) and v and true or false
+end
+
 local function getThreatLib()
     local LibStub = _G.LibStub
     return LibStub and LibStub("LibThreatClassic2", true)
@@ -218,8 +224,10 @@ function T:AttachToPlate()
         local bar = uf and (uf.healthBar or uf.HealthBar)
         if bar then
             local nameHeight = 12
-            if name and name.IsShown and name:IsShown() and name.GetStringHeight then
-                nameHeight = name:GetStringHeight() or nameHeight
+            if name and name.IsShown and yes(name:IsShown()) and name.GetStringHeight then
+                -- Unit names (and so their height) can be secret in instances.
+                local h = name:GetStringHeight()
+                if h and not QoL.IsSecret(h) then nameHeight = h end
             end
             f:SetPoint("BOTTOMRIGHT", bar, "TOPRIGHT", 0, nameHeight + 2)
         elseif name then
@@ -235,7 +243,8 @@ end
 
 -- Returns the text and colour to show, or nil when there is nothing to show.
 function T:GetDisplay()
-    if not UnitExists("target") or UnitIsDeadOrGhost("target") or not UnitCanAttack("player", "target") then
+    if not yes(UnitExists("target")) or yes(UnitIsDeadOrGhost("target"))
+        or not yes(UnitCanAttack("player", "target")) then
         return
     end
     local tanking, status, scaled, raw = self:GetThreat("target")
@@ -246,7 +255,22 @@ function T:GetDisplay()
     return ("%s %d%%"):format(faceIcon(status, r, g, b), math.floor(pct + 0.5)), r, g, b
 end
 
+-- Never leave a number on screen after an error: hide both and note the
+-- error once (shown by /qol threat debug), instead of letting the error
+-- pause the whole feature with the last number stuck in place.
 function T:Update()
+    local ok, err = pcall(self.DoUpdate, self)
+    if not ok then
+        if self.frame then self.frame:Hide() end
+        if self.plateFrame then self.plateFrame:Hide() end
+        if not self.lastError then
+            QoL:Print("threat hit an error and hid itself. Type /qol threat debug to see it.")
+        end
+        self.lastError = tostring(err)
+    end
+end
+
+function T:DoUpdate()
     local f, pf = self.frame, self.plateFrame
     if not f then return end
     if not self.positioned or self.positionPending then self:ApplyPosition() end
@@ -322,14 +346,15 @@ function T:OnEnable()
         -- Unknown events error on some clients; skip them and rely on the timer.
         self.events[event] = pcall(driver.RegisterEvent, driver, event)
     end
-    local update = QoL:Guard("Threat", function() T:Update() end)
+    local update = function() T:Update() end
     driver:SetScript("OnEvent", update)
     local elapsed = 0
     driver:SetScript("OnUpdate", function(_, dt)
         elapsed = elapsed + dt
         if elapsed < UPDATE_INTERVAL then return end
         elapsed = 0
-        if (T.db.enabled or T.db.nameplate) and UnitExists("target") then update() end
+        -- Keep checking while either number is up, so it can never outlive its target.
+        if T.db.enabled or T.db.nameplate or T.frame:IsShown() or T.plateFrame:IsShown() then update() end
     end)
 
     -- LibThreatClassic2 only tracks threat while someone listens to it.
@@ -357,6 +382,7 @@ function T:PrintDebug()
     p("nameplate: %s, C_NamePlate.GetNamePlateForUnit: %s, target has a nameplate: %s",
         tostring(self.db.nameplate), tostring(_G.C_NamePlate ~= nil and _G.C_NamePlate.GetNamePlateForUnit ~= nil),
         tostring(getTargetPlate() ~= nil))
+    if self.lastError then p("last error: %s", self.lastError) end
     if not UnitExists("target") then
         p("no target - target an enemy you are fighting and run this again")
         return
