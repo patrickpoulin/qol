@@ -136,6 +136,17 @@ local HELPERS = {
         set = function(on) ns.FlightMasters:SetOwnFactionOnly(on) end,
     },
 
+    { kind = "header", label = "Flights" },
+    {
+        label = "Show flight times and a countdown while flying",
+        tooltip = "Times each flight you take and saves it per route. Hover a destination on the "
+            .. "flight master's map to see how long it takes, and a small bar counts down to landing "
+            .. "while you fly. Routes you haven't flown yet say \"not timed yet\". "
+            .. "Type /qol flighttimes list to print the times QoL knows.",
+        get = function() return ns.FlightTimes.db.enabled end,
+        set = function(on) ns.FlightTimes:SetEnabled(on) end,
+    },
+
     { kind = "header", label = "Window" },
     {
         kind = "slider",
