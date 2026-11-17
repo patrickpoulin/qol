@@ -81,7 +81,7 @@ Shows your threat on the enemy you have targeted, as a small number just above t
 
 ### Misc tab
 
-A built-in tab in the QoL window with on/off switches and settings, in sections: **Threat** (target frame and nameplate %), **Pet health** (the warning, its parts and both levels; the parts dim when the warning is off), **Map** (zeppelin, boat and flight master pins), **Window** (how see-through the background is; the text and border stay solid) **Action bar** (hide the gryphons on either end of the main action bar), **Trinkets** (the trinket window and its lock) and **Tooltips** (damage and healing per mana on spells).
+A built-in tab in the QoL window with on/off switches and settings, in sections: **Threat** (target frame and nameplate %), **Pet health** (the warning, its parts and both levels; the parts dim when the warning is off), **Map** (zeppelin, boat and flight master pins), **Flights** (flight times and the countdown bar), **Window** (how see-through the background is; the text and border stay solid) **Action bar** (hide the gryphons on either end of the main action bar), **Trinkets** (the trinket window and its lock) and **Tooltips** (damage and healing per mana on spells).
 
 - A small face and your % to pull aggro: `100%` means you pull (or already have it). The face and number follow the game's threat colours: grey, yellow when you are close to pulling, orange, then red when the mob is on you. The face smiles while your threat is low, goes to a flat mouth when you are close (yellow and orange), and opens its mouth once the mob is on you.
 - It reads the game's own threat API (`UnitDetailedThreatSituation`). If the client doesn't have it, QoL uses LibThreatClassic2 when another addon (such as Details! or ThreatClassic2) ships it. With neither, nothing is shown.
@@ -216,6 +216,25 @@ Puts a pin on the world map and minimap for every flight master, coloured by fac
 | `/qol flights mine` | Show only your faction's flight masters, or every faction's again |
 | `/qol flights list` | Print every flight master and where they are |
 | `/qol flights debug` | Print how many flight masters QoL could place, and which ones it couldn't |
+
+### Flight times (`/qol flighttimes`)
+
+Tells you how long a flight takes, like the InFlight and FlightMap addons.
+
+- QoL times every flight you take and saves it for that route (start, destination and faction). Times are shared by all your characters.
+- Open a flight master's map and hover a destination: the tooltip shows **Flight time: 1:31**, or **not timed yet** for a route you haven't flown.
+- While you fly, a small bar counts down to landing. On a route QoL hasn't timed yet it counts up instead, and QoL prints the time when you land. Drag the bar to move it.
+- No preset times are shipped, because Forever's routes may not match Classic's. The latest flight on a route replaces its old time. A `/reload` in the air keeps the timer going; a flight cut short by logging out isn't saved.
+- On by default. Turn it off with the checkbox in the **Flights** section of the Misc tab, or with `/qol flighttimes`.
+
+| Command | What it does |
+| --- | --- |
+| `/qol flighttimes` / `on` / `off` | Turn flight times on or off |
+| `/qol flighttimes list` | Print every flight time QoL knows |
+| `/qol flighttimes test` | Show the countdown bar for 15 seconds, to place it |
+| `/qol flighttimes reset` | Move the bar back to the top of the screen |
+| `/qol flighttimes clear` | Forget every learned flight time |
+| `/qol flighttimes debug` | Print what QoL sees, to help fix a missing time |
 
 ### Zone Levels (`/qol zones`)
 
