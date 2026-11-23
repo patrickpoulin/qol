@@ -2,7 +2,7 @@
 ## Title: QoL
 ## Notes: Quality-of-life features. Type /qol for help.
 ## Author: Patrick
-## Version: 0.21.0
+## Version: 0.22.0
 ## SavedVariables: QoLDB
 ## SavedVariablesPerCharacter: QoLCharDB
 
@@ -45,5 +45,3 @@ Modules/Mail/Panel.lua
 Modules/Cooldowns/Cooldowns.lua
 
 Modules/Trinkets/Trinkets.lua
-
-Modules/SpellEfficiency/SpellEfficiency.lua

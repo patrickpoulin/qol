@@ -10,6 +10,9 @@ _G.QoL = QoL -- handy for /dump while debugging
 
 local DB_VERSION = 1
 
+-- Keys of modules that no longer exist, so their saved settings get cleared.
+local RETIRED_MODULES = { "dpm" } -- damage per mana, removed in 0.22.0
+
 function QoL:Print(...)
     print("|cff33ff99QoL|r:", ...)
 end
@@ -91,6 +94,11 @@ events:SetScript("OnEvent", function(_, event, arg1)
         QoLCharDB = QoLCharDB or {}
         migrate(QoLDB)
         QoLDB.modules = QoLDB.modules or {}
+        -- Drop saved settings left behind by modules that were removed.
+        for _, key in ipairs(RETIRED_MODULES) do
+            QoLDB.modules[key] = nil
+            QoLCharDB[key] = nil
+        end
 
         for _, key in ipairs(QoL.moduleOrder) do
             local mod = QoL.modules[key]
