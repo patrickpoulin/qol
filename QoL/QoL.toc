@@ -2,7 +2,7 @@
 ## Title: QoL
 ## Notes: Quality-of-life features. Type /qol for help.
 ## Author: Patrick
-## Version: 0.22.0
+## Version: 0.23.0
 ## SavedVariables: QoLDB
 ## SavedVariablesPerCharacter: QoLCharDB
 
@@ -29,8 +29,6 @@ Modules/Threat/Threat.lua
 
 Modules/PetHealth/PetHealth.lua
 
-Modules/Zeppelins/Zeppelins.lua
-Modules/FlightMasters/FlightMasters.lua
 Modules/FlightTimes/FlightTimes.lua
 
 Modules/ZoneLevels/ZoneLevels.lua
