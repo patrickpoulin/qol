@@ -11,7 +11,11 @@ _G.QoL = QoL -- handy for /dump while debugging
 local DB_VERSION = 1
 
 -- Keys of modules that no longer exist, so their saved settings get cleared.
-local RETIRED_MODULES = { "dpm" } -- damage per mana, removed in 0.22.0
+local RETIRED_MODULES = {
+    "dpm",        -- damage per mana, removed in 0.22.0
+    "zeppelins",  -- zeppelin and boat map pins, removed in 0.23.0
+    "flights",    -- flight master map pins, removed in 0.23.0
+}
 
 function QoL:Print(...)
     print("|cff33ff99QoL|r:", ...)

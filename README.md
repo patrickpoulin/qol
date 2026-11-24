@@ -81,7 +81,7 @@ Shows your threat on the enemy you have targeted, as a small number just above t
 
 ### Misc tab
 
-A built-in tab in the QoL window with on/off switches and settings, in sections: **Threat** (target frame and nameplate %), **Pet health** (the warning, its parts and both levels; the parts dim when the warning is off), **Map** (zeppelin, boat and flight master pins), **Flights** (flight times and the countdown bar), **Window** (how see-through the background is; the text and border stay solid), **Action bar** (hide the gryphons on either end of the main action bar) and **Trinkets** (the trinket window and its lock).
+A built-in tab in the QoL window with on/off switches and settings, in sections: **Threat** (target frame and nameplate %), **Pet health** (the warning, its parts and both levels; the parts dim when the warning is off), **Flights** (flight times and the countdown bar), **Window** (how see-through the background is; the text and border stay solid), **Action bar** (hide the gryphons on either end of the main action bar) and **Trinkets** (the trinket window and its lock).
 
 - A small face and your % to pull aggro: `100%` means you pull (or already have it). The face and number follow the game's threat colours: grey, yellow when you are close to pulling, orange, then red when the mob is on you. The face smiles while your threat is low, goes to a flat mouth when you are close (yellow and orange), and opens its mouth once the mob is on you.
 - It reads the game's own threat API (`UnitDetailedThreatSituation`). If the client doesn't have it, QoL uses LibThreatClassic2 when another addon (such as Details! or ThreatClassic2) ships it. With neither, nothing is shown.
@@ -136,74 +136,6 @@ A small window with your two trinket slots, off until you tick it in the **Trink
 | `/qol trinkets` / `on` / `off` | Show or hide the window |
 | `/qol trinkets lock` / `unlock` | Lock or unlock the window |
 | `/qol trinkets reset` | Move the window back below the centre of the screen |
-
-### Zeppelins (`/qol zeppelins`)
-
-Puts a pin on the world map and minimap for every zeppelin platform. Hover a pin to see where that zeppelin goes and who the zeppelin master is. Turn it on or off with the checkbox on the **Misc** tab, or with `/qol zeppelins`.
-
-| Tower | Platform | Goes to |
-| --- | --- | --- |
-| Orgrimmar (Durotar 50.8, 13.5) | Frezza | Undercity, Tirisfal Glades |
-| Orgrimmar (Durotar 50.7, 12.9) | Snurk Bucksquick | Grom'gol Base Camp, Stranglethorn Vale |
-| Undercity (Tirisfal Glades 60.7, 58.9) | Zapetta | Orgrimmar, Durotar |
-| Undercity (Tirisfal Glades 61.8, 59.2) | Hin Denburg | Grom'gol Base Camp, Stranglethorn Vale |
-| Grom'gol (Stranglethorn Vale 31.4, 29.9) | Nez'raz | Orgrimmar, Durotar |
-| Grom'gol (Stranglethorn Vale 31.5, 29.4) | Squibby Overspeck | Undercity, Tirisfal Glades |
-| Skywatcher Plateau (Mulgore 34.3, 25.8) | skyboat | Valanaar, Zephras Isle (Forever only, not checked in game) |
-| Dalaran (Alterac Mountains 12.5, 51.8) | skyboat | Valanaar, Zephras Isle (Forever only, not checked in game) |
-
-Docks only one faction can use (Horde zeppelins and skyboat, Alliance boats and ferry) are hidden on characters of the other faction. Ratchet to Booty Bay and the Dalaran skyboat show for everyone.
-
-**Boats** have gold pins (zeppelins are blue), with their own checkbox on the Misc tab:
-
-| Dock | Goes to |
-| --- | --- |
-| Ratchet (The Barrens 63.4, 38.5) | Booty Bay |
-| Booty Bay (Stranglethorn Vale 26.4, 73.6) | Ratchet |
-| Menethil Harbor, north pier (Wetlands 5.0, 57.1) | Auberdine (in Forever it stops at Southshore first) |
-| Menethil Harbor, south pier (Wetlands 5.3, 63.8) | Theramore |
-| Theramore (Dustwallow Marsh 71.3, 56.3) | Menethil Harbor |
-| Auberdine (Darkshore 33.2, 40.2, approximate) | Rut'theran Village |
-| Auberdine (Darkshore 32.4, 43.8, approximate) | Menethil Harbor |
-| Rut'theran Village (Teldrassil 55.0, 96.5, approximate) | Auberdine |
-| Feathermoon Stronghold (Feralas 31.0, 39.9, approximate) | The Forgotten Coast |
-| The Forgotten Coast (Feralas 43.3, 42.8, approximate) | Feathermoon Stronghold |
-| Steamwheedle Port (Tanaris 67.0, 23.0, approximate) | Powderfuse Port, The Riverglades (Forever, both factions) |
-| Powderfuse Port (The Riverglades 78.0, 52.0, approximate) | Steamwheedle Port, Tanaris (Forever, both factions) |
-
-Forever's Stormwind Harbor and Southshore docks have no pins yet because their positions aren't known.
-
-- On zone maps each platform has its own pin. On the continent map a tower has one pin that lists both platforms.
-- Minimap pins show when a dock is within minimap range, and follow a rotating minimap.
-- The Zephras Isle end of the skyboats has no pin yet, because its map position isn't known.
-- If a pin is in the wrong spot, stand next to that zeppelin master and type `/qol zeppelins here`. QoL moves the pin there and prints the new spot.
-
-| Command | What it does |
-| --- | --- |
-| `/qol zeppelins` / `on` / `off` | Turn the zeppelin pins on or off |
-| `/qol zeppelins boats` / `boats on` / `boats off` | Turn the boat pins on or off |
-| `/qol zeppelins where` | Print the map and spot you are standing on |
-| `/qol zeppelins list` | Print every dock and where it goes |
-| `/qol zeppelins here` | Standing on a platform, move that platform's pin to where you are |
-| `/qol zeppelins reset` | Put every moved pin back |
-| `/qol zeppelins debug` | Print the map IDs and positions QoL is using |
-### Flight masters (`/qol flights`)
-
-Puts a pin on the world map and minimap for every flight master, coloured by faction: **blue** for Alliance, **red** for Horde and **green** for neutral ones both factions can use (Ratchet and Marshal's Refuge). Hover a pin to see the flight master's name, what they are (gryphon master, wind rider master and so on), the town and the faction. Turn it on or off with the checkbox in the **Map** section of the Misc tab, or with `/qol flights`.
-
-- All 64 flight masters show by default, both factions. Tick **Only my faction's flight masters** (or `/qol flights mine`) to hide the other side's; neutral ones still show.
-- Spots come from QuestieDB's WoW Forever data, so they use Forever's own positions where Forever moved a flight master (Stormwind, Lakeshire and Light's Hope Chapel).
-- New in Forever: Grakna (Horde) and Gretchen Mayberry (Alliance) in the Riverglades, and Fayran Elthas (Alliance) in Mount Hyjal. Their tooltips say they haven't been checked in game.
-- Zephras Isle has no flight master in that data. It's reached by the skyboats on the zeppelin pins.
-- The druid-only flight masters in Thunder Bluff and Darnassus are left out.
-- City flight masters (Stormwind, Ironforge, Orgrimmar, Thunder Bluff, Undercity) show on the city map and on the continent map.
-
-| Command | What it does |
-| --- | --- |
-| `/qol flights` / `on` / `off` | Turn the flight master pins on or off |
-| `/qol flights mine` | Show only your faction's flight masters, or every faction's again |
-| `/qol flights list` | Print every flight master and where they are |
-| `/qol flights debug` | Print how many flight masters QoL could place, and which ones it couldn't |
 
 ### Flight times (`/qol flighttimes`)
 
