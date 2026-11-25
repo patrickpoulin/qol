@@ -118,9 +118,11 @@ local HELPERS = {
     },
     {
         indent = true, enabledIf = hotsOn,
-        label = "Show the spell icon in front of each number",
-        tooltip = "A small icon of the spell next to its countdown, to tell your HoTs apart at a glance.",
-        get = function() return ns.RaidHoTs.db.icon end,
+        label = "Show each number on its spell's icon",
+        tooltip = "Puts each countdown on top of the spell's icon, like a normal cooldown, so you can tell "
+            .. "your HoTs apart at a glance. The icons sit side by side. Untick it for plain numbers "
+            .. "stacked top to bottom.",
+        get = function() return ns.RaidHoTs.db.icons end,
         set = function(on) ns.RaidHoTs:SetIcon(on) end,
     },
     {
