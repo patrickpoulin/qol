@@ -172,17 +172,17 @@ A **Zone Levels** button in the top-right corner of the world map opens a list o
 Big countdowns for your own heal-over-time spells, just outside the right edge of each of Blizzard's raid frames, so you can see at a glance when to refresh them.
 
 - Priests see **Renew**. Druids see **Rejuvenation** and **Regrowth**. Every rank counts. Only HoTs you cast are shown, not other healers' ones.
-- Each number sits on top of its spell's icon, like a normal cooldown, so you can tell your HoTs apart. A druid's icons sit side by side, Rejuvenation first, so a spell is always in the same place.
-- Each spell's number has its own colour (Renew white, Rejuvenation purple, Regrowth green), and turns yellow in the last 3 seconds.
+- Each number sits on top of its spell's icon with a cooldown swipe, like a normal cooldown, so you can tell your HoTs apart. They sit side by side in the same order as the small buff icons on the raid frame.
+- In combat the game hides buff names and times from addons, so QoL copies the small buff icons Blizzard's raid frame already shows for your HoTs onto its big ones, and the game draws the countdown numbers. That's why it keeps working in combat. When the game lets QoL read a buff's name (usually out of combat), your other buffs, such as Power Word: Fortitude, are left out.
 - Works on raid frames and on party frames when **Use Raid-Style Party Frames** is on in the game's options. The old-style party portraits aren't covered.
-- On by default. Turn it off, change the number size (10 to 30, 16 by default; the icons grow with it) or switch to plain numbers without icons in the **Raid frame HoTs** section of the Misc tab.
+- On by default. Turn it off, change the number size (10 to 30, 16 by default; the icons grow with it) or switch to numbers only, without icons, in the **Raid frame HoTs** section of the Misc tab.
 - It never touches Blizzard's raid frames, so it works in combat and click-casting is unaffected. The numbers sit outside the frame, so with several columns of raid frames side by side they overlap the next column a little. A size change made in combat, or a raid frame that first appears mid-fight, shows when combat ends.
 
 | Command | What it does |
 | --- | --- |
 | `/qol hots` / `on` / `off` | Turn the countdowns on or off |
 | `/qol hots size <10-30>` | Set how big the numbers are |
-| `/qol hots icon on` / `off` | Show each number on its spell's icon, or plain numbers |
+| `/qol hots icon on` / `off` | Show each number on its spell's icon, or numbers only |
 | `/qol hots test` | Show sample timers on your raid frames for 15 seconds, to check the size |
 | `/qol hots debug` | Print what QoL sees on each raid frame |
 

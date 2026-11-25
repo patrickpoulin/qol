@@ -111,7 +111,7 @@ local HELPERS = {
     {
         label = "Big countdowns for your HoTs beside the raid frames",
         tooltip = "Shows how long your Renew, Rejuvenation and Regrowth have left in large numbers "
-            .. "just to the right of each raid frame. The number turns yellow in the last 3 seconds. "
+            .. "just to the right of each raid frame, and keeps working in combat. "
             .. "Works on raid frames and on raid-style party frames. Type /qol hots test to preview it.",
         get = function() return ns.RaidHoTs.db.enabled end,
         set = function(on) ns.RaidHoTs:SetEnabled(on) end,
@@ -120,8 +120,7 @@ local HELPERS = {
         indent = true, enabledIf = hotsOn,
         label = "Show each number on its spell's icon",
         tooltip = "Puts each countdown on top of the spell's icon, like a normal cooldown, so you can tell "
-            .. "your HoTs apart at a glance. The icons sit side by side. Untick it for plain numbers "
-            .. "stacked top to bottom.",
+            .. "your HoTs apart at a glance. Untick it for numbers only.",
         get = function() return ns.RaidHoTs.db.icons end,
         set = function(on) ns.RaidHoTs:SetIcon(on) end,
     },
