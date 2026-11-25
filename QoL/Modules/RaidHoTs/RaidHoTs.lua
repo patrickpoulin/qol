@@ -2,37 +2,41 @@
 -- Rejuvenation, Regrowth), just outside the right edge of each of Blizzard's
 -- raid frames (and raid-style party frames).
 --
--- Combat rules: Blizzard's raid frames are protected. QoL never touches them.
--- It hangs one plain frame (a "holder") off the right edge of each one, and
--- only moves or resizes that holder out of combat. In combat it only changes
--- the text, colour and visibility of the holder's own text and icons, which
--- the game allows. A raid frame that first appears mid-fight gets its holder
--- when combat ends.
+-- In combat the game hides aura names and times from addons ("secret"
+-- values), so QoL can't read or work out how long a HoT has left. It doesn't
+-- need to: Blizzard's raid frame already shows your HoTs as small buff icons
+-- with a cooldown swipe. QoL copies each of those icons onto a big icon of
+-- its own, passing the icon and timing straight through without looking at
+-- them, and lets the game draw the countdown numbers on top. Secret values
+-- can be handed to the game's widgets like that; they just can't be compared
+-- or used in maths.
+--
+-- Combat rules: Blizzard's raid frames are protected. QoL never touches them
+-- or calls their code. It hangs one plain frame (a "holder") off the right
+-- edge of each one, and only creates, moves or resizes holders out of combat.
+-- In combat it only changes textures, cooldowns and alpha. A raid frame that
+-- first appears mid-fight gets its holder when combat ends.
 local _, ns = ...
 local QoL = ns.QoL
 
-local GetTime = _G.GetTime
-local C_Spell, C_UnitAuras = _G.C_Spell, _G.C_UnitAuras
+local C_Spell = _G.C_Spell
 
-local TICK = 0.1          -- seconds between countdown updates
-local LOW_TIME = 3        -- seconds left when the number turns yellow
-local GAP = 2             -- pixels between the raid frame and the numbers
-local FONT = "Fonts\\FRIZQT__.TTF"
-local LOW_COLOR = { 1, 0.82, 0 }
-local TEST_LENGTH = 15    -- seconds /qol hots test runs for
-local ICON_SCALE = 1.75   -- icon edge, as a multiple of the number's size
+local GAP = 2             -- pixels between the raid frame and the icons
 local ICON_GAP = 2        -- pixels between icons
+local ICON_SCALE = 1.75   -- icon edge, as a multiple of the number's size
+local FONT = "Fonts\\FRIZQT__.TTF"
+local TEST_LENGTH = 15    -- seconds /qol hots test runs for
 
--- Your own HoTs, per class. Matched by name, so every rank counts. Each
--- spell keeps its own row on the frame, top to bottom in this order, so a
--- spell is always in the same place.
+-- Your own HoTs, per class. When the game lets QoL read a buff's name, buffs
+-- not on this list (e.g. Power Word: Fortitude) are left out. Matched by
+-- name, so every rank counts.
 local HOTS = {
     PRIEST = {
-        { key = "renew", id = 139, name = "Renew", color = { 1, 1, 1 } },
+        { id = 139, name = "Renew" },
     },
     DRUID = {
-        { key = "rejuv", id = 774, name = "Rejuvenation", color = { 0.85, 0.5, 1 } },
-        { key = "regrowth", id = 8936, name = "Regrowth", color = { 0.45, 1, 0.45 } },
+        { id = 774, name = "Rejuvenation" },
+        { id = 8936, name = "Regrowth" },
     },
 }
 
@@ -45,13 +49,20 @@ local FRAME_PATTERNS = {
     "^CompactPartyFramePlayer$",
 }
 
+-- Every way Blizzard's code can start or stop a buff's cooldown swipe. Each
+-- call is repeated on QoL's big icon with the same arguments.
+local COOLDOWN_METHODS = {
+    "SetCooldown", "SetCooldownDuration", "SetCooldownUNIX",
+    "SetCooldownFromExpirationTime", "SetCooldownFromDurationObject", "Clear",
+}
+
 local H = QoL:RegisterModule("hots", {
     name = "Raid frame HoTs",
     description = "big countdowns for your HoTs beside the raid frames",
     defaults = {
         enabled = true,
-        size = 16,     -- text height in pixels
-        icons = true,  -- each number sits on its spell's icon
+        size = 16,     -- countdown number height in pixels
+        icons = true,  -- false: numbers only, no icon or swipe
     },
     slashHelp = {
         "/qol hots on | off - turn the big HoT countdowns on or off",
@@ -65,6 +76,7 @@ ns.RaidHoTs = H
 
 H.frames = {}   -- raid frame -> its holder
 H.pending = {}  -- raid frames seen in combat, waiting for a holder
+H.slotFor = {}  -- Blizzard buff icon -> QoL's big icon
 
 local function spellName(spell)
     local name
@@ -92,102 +104,153 @@ local function isRaidFrame(frame)
     return false
 end
 
-local function frameUnit(frame)
-    return frame.displayedUnit or frame.unit
-end
-
--- One buff by index: name, expirationTime, source. Newer clients first.
-local function getAura(unit, i)
-    if C_UnitAuras and C_UnitAuras.GetAuraDataByIndex then
-        local data = C_UnitAuras.GetAuraDataByIndex(unit, i, "HELPFUL|PLAYER")
-        if data then return true, data.name, data.expirationTime, data.sourceUnit end
-        return false
-    end
-    if _G.UnitAura then
-        local name, _, _, _, _, expires, source = _G.UnitAura(unit, i, "HELPFUL|PLAYER")
-        if name then return true, name, expires, source end
-    end
-    return false
-end
-
--- The player's tracked HoTs on a unit: { [spell key] = expirationTime }.
--- Values the game keeps secret are skipped rather than shown wrong.
-function H:ScanUnit(unit, out)
-    wipe(out)
-    if not unit or not UnitExists(unit) then return out end
-    for i = 1, 40 do
-        local ok, found, name, expires, source = pcall(getAura, unit, i)
-        if not ok or not found then break end
-        if not (QoL.IsSecret(name) or QoL.IsSecret(expires) or QoL.IsSecret(source)) then
-            local key = self.byName[name]
-            local mine = source == nil or source == "player" or source == "pet" or source == "vehicle"
-            if key and mine and expires and expires > 0 then
-                -- Two copies can't happen for your own HoT, but keep the longest.
-                if not out[key] or expires > out[key] then out[key] = expires end
-            end
-        end
-    end
-    return out
-end
-
 function H:OnLoad()
     self.db.icon = nil -- 0.24.0's "icon beside the number" setting, replaced by icons
 end
 
+-- The font the game draws countdown numbers in, at our size.
+function H:CountdownFont()
+    if not self.font then
+        self.font = _G.CreateFont("QoLRaidHoTsCountdownFont")
+    end
+    self.font:SetFont(FONT, self.db.size, "OUTLINE")
+    return self.font
+end
+
+-- Big icons -----------------------------------------------------------------
+
+-- Shown only while its Blizzard buff icon is, and the buff is one we track.
+-- Alpha rather than Show/Hide, so it is always allowed in combat.
+function H:RefreshSlot(slot)
+    if slot.testing then return end
+    local on = self.db.enabled and slot.buff:IsShown() and not slot.skip
+    slot:SetAlpha(on and 1 or 0)
+end
+
+-- Sets the number's font on the cooldown. Newer clients take a font object;
+-- older ones only have the font string the cooldown makes for the number.
+function H:StyleCountdown(cd)
+    if cd.SetCountdownFont then
+        pcall(cd.SetCountdownFont, cd, "QoLRaidHoTsCountdownFont")
+    end
+    for _, region in ipairs({ cd:GetRegions() }) do
+        if region.GetObjectType and region:GetObjectType() == "FontString" then
+            region:SetFont(FONT, self.db.size, "OUTLINE")
+        end
+    end
+    cd.qolSize = self.db.size
+end
+
+function H:CreateSlot(holder, buff)
+    local slot = CreateFrame("Frame", nil, holder)
+    slot.buff = buff
+    slot.icon = slot:CreateTexture(nil, "ARTWORK")
+    slot.icon:SetAllPoints()
+    slot.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+
+    local cd = CreateFrame("Cooldown", nil, slot, "CooldownFrameTemplate")
+    cd:SetAllPoints()
+    if cd.SetDrawEdge then cd:SetDrawEdge(false) end
+    if cd.SetHideCountdownNumbers then cd:SetHideCountdownNumbers(false) end
+    if buff.cooldown and buff.cooldown.GetReverse and cd.SetReverse then
+        cd:SetReverse(buff.cooldown:GetReverse())
+    end
+    slot.cd = cd
+    slot:SetAlpha(0)
+
+    -- Copy everything Blizzard does to its small icon onto the big one.
+    local guard = function(fn) return QoL:Guard("Raid frame HoTs", fn) end
+    if buff.icon then
+        hooksecurefunc(buff.icon, "SetTexture", guard(function(_, texture)
+            if not slot.testing then slot.icon:SetTexture(texture) end
+        end))
+        slot.icon:SetTexture(buff.icon:GetTexture())
+    end
+    if buff.cooldown then
+        for _, method in ipairs(COOLDOWN_METHODS) do
+            if type(buff.cooldown[method]) == "function" and type(cd[method]) == "function" then
+                hooksecurefunc(buff.cooldown, method, guard(function(_, ...)
+                    if slot.testing then return end
+                    cd[method](cd, ...)
+                    -- The number's font string can be made on first use.
+                    if cd.qolSize ~= H.db.size then H:StyleCountdown(cd) end
+                end))
+            end
+        end
+    end
+    buff:HookScript("OnShow", guard(function() H:RefreshSlot(slot) end))
+    buff:HookScript("OnHide", guard(function() H:RefreshSlot(slot) end))
+
+    self.slotFor[buff] = slot
+    self:RefreshSlot(slot)
+    return slot
+end
+
+-- Blizzard fills a buff icon with this; it tells us which buff it is, when
+-- the game lets us read the name.
+local function onSetBuff(buff, unitOrAura, index, filter)
+    local slot = H.slotFor[buff]
+    if not slot then return end
+    local name
+    if type(unitOrAura) == "table" then
+        name = unitOrAura.name
+    elseif unitOrAura and index and _G.UnitBuff then
+        local ok, n = pcall(_G.UnitBuff, unitOrAura, index, filter)
+        if ok then name = n end
+    end
+    if name == nil or QoL.IsSecret(name) then
+        slot.skip = false -- can't tell, so show it
+    else
+        slot.skip = not H.byName[name]
+    end
+    H:RefreshSlot(slot)
+end
+
 -- Holders -------------------------------------------------------------------
+
+-- Adds big icons for any of the raid frame's buff icons that don't have one.
+-- Out of combat only.
+function H:AddSlots(frame, holder)
+    local added = false
+    for i, buff in ipairs(frame.buffFrames or {}) do
+        if not holder.slots[i] then
+            holder.slots[i] = self:CreateSlot(holder, buff)
+            added = true
+        end
+    end
+    return added
+end
 
 function H:CreateHolder(frame)
     local holder = CreateFrame("Frame", nil, frame)
     holder:SetSize(1, 1)
-    holder.rows = {}
-    holder.expires = {}
-    for i, spell in ipairs(self.spells) do
-        local row = {}
-        row.text = holder:CreateFontString(nil, "OVERLAY")
-        row.text:SetJustifyH("LEFT")
-        row.icon = holder:CreateTexture(nil, "ARTWORK")
-        row.icon:SetTexture(spellIcon(spell))
-        row.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
-        row.text:Hide()
-        row.icon:Hide()
-        holder.rows[i] = row
-    end
+    holder.slots = {}
     self.frames[frame] = holder
+    self:AddSlots(frame, holder)
     self:LayoutHolder(frame, holder)
     return holder
 end
 
--- Places a holder and its rows. Out of combat only.
+-- Places a holder and its icons. Out of combat only.
 function H:LayoutHolder(frame, holder)
     local size = self.db.size
+    local iconSize = math.floor(size * ICON_SCALE + 0.5)
     holder:ClearAllPoints()
-    holder:SetPoint("TOPLEFT", frame, "TOPRIGHT", GAP, 0)
-    holder:SetPoint("BOTTOMLEFT", frame, "BOTTOMRIGHT", GAP, 0)
-    holder:SetWidth(size * 3)
+    holder:SetPoint("LEFT", frame, "RIGHT", GAP, 0)
+    holder:SetSize(iconSize, iconSize)
     holder:SetFrameStrata(frame:GetFrameStrata())
     holder:SetFrameLevel(frame:GetFrameLevel() + 10)
-
-    local count = #holder.rows
-    for i, row in ipairs(holder.rows) do
-        row.text:SetFont(FONT, size, "OUTLINE")
-        row.text:ClearAllPoints()
-        row.icon:ClearAllPoints()
-        if self.db.icons then
-            -- Like a normal cooldown: the number centred on the spell's icon.
-            -- Icons sit side by side in a row, centred on the frame.
-            local iconSize = math.floor(size * ICON_SCALE + 0.5)
-            row.icon:SetSize(iconSize, iconSize)
-            row.icon:SetPoint("LEFT", holder, "LEFT", (i - 1) * (iconSize + ICON_GAP), 0)
-            row.text:SetPoint("CENTER", row.icon, "CENTER", 1, 0)
-            row.text:SetJustifyH("CENTER")
-        else
-            -- Numbers only, stacked top to bottom and centred on the frame.
-            local y = ((count + 1) / 2 - i) * (size + 1)
-            row.text:SetPoint("LEFT", holder, "LEFT", 0, y)
-            row.text:SetJustifyH("LEFT")
-        end
-    end
     holder:Show()
+
+    -- Side by side, in the same order as Blizzard's own buff icons.
+    for i, slot in ipairs(holder.slots) do
+        slot:ClearAllPoints()
+        slot:SetSize(iconSize, iconSize)
+        slot:SetPoint("LEFT", holder, "LEFT", (i - 1) * (iconSize + ICON_GAP), 0)
+        slot.icon:SetShown(self.db.icons)
+        if slot.cd.SetDrawSwipe then slot.cd:SetDrawSwipe(self.db.icons) end
+        self:StyleCountdown(slot.cd)
+    end
 end
 
 function H:LayoutAll()
@@ -196,6 +259,7 @@ function H:LayoutAll()
         return false
     end
     self.layoutPending = nil
+    self:CountdownFont()
     for frame, holder in pairs(self.frames) do
         self:LayoutHolder(frame, holder)
     end
@@ -205,15 +269,17 @@ end
 -- Called for every raid frame Blizzard sets up or refreshes.
 function H:Track(frame)
     if not self.spells or not isRaidFrame(frame) then return end
+    if InCombatLockdown() then
+        local holder = self.frames[frame]
+        if not holder or #holder.slots < #(frame.buffFrames or {}) then self.pending[frame] = true end
+        return
+    end
     local holder = self.frames[frame]
     if not holder then
-        if InCombatLockdown() then
-            self.pending[frame] = true
-            return
-        end
-        holder = self:CreateHolder(frame)
+        self:CreateHolder(frame)
+    elseif self:AddSlots(frame, holder) then
+        self:LayoutHolder(frame, holder)
     end
-    self:ScanFrame(frame, holder)
 end
 
 -- Blizzard's raid frames that already exist (e.g. after /reload).
@@ -230,72 +296,8 @@ function H:FindFrames()
     try("CompactPartyFramePlayer")
 end
 
--- Updating ------------------------------------------------------------------
-
-function H:ScanFrame(frame, holder)
-    holder.unit = frameUnit(frame)
-    self:ScanUnit(holder.unit, holder.expires)
-end
-
-function H:ScanAll()
-    for frame, holder in pairs(self.frames) do
-        self:ScanFrame(frame, holder)
-    end
-end
-
-function H:OnUnitAura(unit)
-    if not self.db.enabled then return end
-    for frame, holder in pairs(self.frames) do
-        if frameUnit(frame) == unit then self:ScanFrame(frame, holder) end
-    end
-end
-
-local function formatTime(left)
-    if left >= 60 then return ("%dm"):format(math.ceil(left / 60)) end
-    return ("%d"):format(math.ceil(left))
-end
-
--- Text, colour and visibility only, so it is safe in combat.
-function H:Render()
-    local now = GetTime()
-    local testing = self.testUntil and now < self.testUntil
-    if self.testUntil and not testing then self.testUntil = nil end
-    for frame, holder in pairs(self.frames) do
-        local visible = self.db.enabled and frame:IsVisible()
-        if visible and holder.unit ~= frameUnit(frame) then
-            -- Blizzard moved a different player into this frame.
-            self:ScanFrame(frame, holder)
-        end
-        for i, row in ipairs(holder.rows) do
-            local spell = self.spells[i]
-            local expires = holder.expires[spell.key]
-            if testing then expires = self.testStart + TEST_LENGTH - (i - 1) * 4 end
-            local left = expires and (expires - now)
-            if visible and left and left > 0 then
-                local c = left <= LOW_TIME and LOW_COLOR or spell.color
-                row.text:SetText(formatTime(left))
-                row.text:SetTextColor(c[1], c[2], c[3])
-                row.text:Show()
-                row.icon:SetShown(self.db.icons)
-            else
-                row.text:Hide()
-                row.icon:Hide()
-            end
-        end
-    end
-end
-
-function H:StartTicker()
-    if self.ticker then return end
-    self.ticker = C_Timer.NewTicker(TICK, QoL:Guard("Raid frame HoTs", function() H:Render() end))
-end
-
-function H:StopTicker()
-    if self.ticker then
-        self.ticker:Cancel()
-        self.ticker = nil
-    end
-    self:Render() -- hides every number
+function H:RefreshAll()
+    for _, slot in pairs(self.slotFor) do self:RefreshSlot(slot) end
 end
 
 -- Setup ---------------------------------------------------------------------
@@ -307,24 +309,26 @@ function H:OnEnable()
 
     self.byName = {}
     for _, spell in ipairs(self.spells) do
-        self.byName[spellName(spell)] = spell.key
-        self.byName[spell.name] = spell.key
+        self.byName[spellName(spell)] = true
+        self.byName[spell.name] = true
     end
+    self:CountdownFont()
 
     local track = QoL:Guard("Raid frame HoTs", function(frame) H:Track(frame) end)
-    for _, fn in ipairs({ "CompactUnitFrame_SetUnit", "CompactUnitFrame_UpdateAll", "CompactUnitFrame_SetUpFrame" }) do
+    for _, fn in ipairs({ "CompactUnitFrame_SetUnit", "CompactUnitFrame_UpdateAll",
+        "CompactUnitFrame_SetUpFrame", "CompactUnitFrame_SetMaxBuffs" }) do
         if type(_G[fn]) == "function" then hooksecurefunc(fn, track) end
+    end
+    if type(_G.CompactUnitFrame_UtilSetBuff) == "function" then
+        hooksecurefunc("CompactUnitFrame_UtilSetBuff", QoL:Guard("Raid frame HoTs", onSetBuff))
     end
 
     local f = CreateFrame("Frame")
-    f:RegisterEvent("UNIT_AURA")
     f:RegisterEvent("GROUP_ROSTER_UPDATE")
     f:RegisterEvent("PLAYER_ENTERING_WORLD")
     f:RegisterEvent("PLAYER_REGEN_ENABLED")
-    f:SetScript("OnEvent", QoL:Guard("Raid frame HoTs", function(_, event, unit)
-        if event == "UNIT_AURA" then
-            H:OnUnitAura(unit)
-        elseif event == "PLAYER_REGEN_ENABLED" then
+    f:SetScript("OnEvent", QoL:Guard("Raid frame HoTs", function(_, event)
+        if event == "PLAYER_REGEN_ENABLED" then
             for frame in pairs(H.pending) do
                 H.pending[frame] = nil
                 H:Track(frame)
@@ -332,25 +336,18 @@ function H:OnEnable()
             if H.layoutPending then H:LayoutAll() end
         else
             H:FindFrames()
-            H:ScanAll()
         end
     end))
     self.events = f
 
     self:FindFrames()
-    if self.db.enabled then self:StartTicker() end
 end
 
 function H:SetEnabled(on)
     self.db.enabled = on and true or false
     if not self.spells then return end
-    if self.db.enabled then
-        self:FindFrames()
-        self:ScanAll()
-        self:StartTicker()
-    else
-        self:StopTicker()
-    end
+    self:FindFrames()
+    self:RefreshAll()
 end
 
 function H:SetSize(size)
@@ -368,58 +365,78 @@ function H:SetIcon(on)
     end
 end
 
-local function countFrames()
-    local n = 0
-    for _ in pairs(H.frames) do n = n + 1 end
-    return n
-end
-
+-- Sample timers on every raid frame's first icons, then back to normal.
 function H:Test()
     if not self.spells then
         return QoL:Print("your class has no HoTs QoL tracks (priests and druids do).")
     end
+    if InCombatLockdown() then return QoL:Print("try the test out of combat.") end
     self:FindFrames()
     local shown = 0
-    for frame in pairs(self.frames) do
-        if frame:IsVisible() then shown = shown + 1 end
+    local now = _G.GetTime()
+    for frame, holder in pairs(self.frames) do
+        if frame:IsVisible() then
+            shown = shown + 1
+            for i, slot in ipairs(holder.slots) do
+                local spell = self.spells[i]
+                if spell then
+                    slot.testing = true
+                    slot.icon:SetTexture(spellIcon(spell))
+                    slot.cd:SetCooldown(now, TEST_LENGTH - (i - 1) * 4)
+                    if slot.cd.qolSize ~= self.db.size then self:StyleCountdown(slot.cd) end
+                    slot:SetAlpha(1)
+                end
+            end
+        end
     end
     if shown == 0 then
         return QoL:Print("no raid frames are showing. Join a group, or turn on "
             .. "Use Raid-Style Party Frames in the game's options.")
     end
     if not self.db.enabled then QoL:Print("the countdowns are turned off. Type /qol hots on.") end
-    self.testStart = GetTime()
-    self.testUntil = self.testStart + TEST_LENGTH
     QoL:Print(("showing sample timers on %d raid frames for %d seconds."):format(shown, TEST_LENGTH))
+    C_Timer.After(TEST_LENGTH, QoL:Guard("Raid frame HoTs", function() H:EndTest() end))
+end
+
+function H:EndTest()
+    for _, slot in pairs(self.slotFor) do
+        if slot.testing then
+            slot.testing = nil
+            slot.cd:Clear()
+            -- Back to Blizzard's icon; its timing comes back on the next buff update.
+            if slot.buff.icon then slot.icon:SetTexture(slot.buff.icon:GetTexture()) end
+            self:RefreshSlot(slot)
+        end
+    end
 end
 
 function H:PrintDebug()
     local _, class = UnitClass("player")
-    QoL:Print(("hots: class %s, on: %s, size %d, icon: %s, in combat: %s"):format(
+    QoL:Print(("hots: class %s, on: %s, size %d, icons: %s, in combat: %s, secret values: %s"):format(
         tostring(class), tostring(self.db.enabled), self.db.size, tostring(self.db.icons),
-        tostring(InCombatLockdown() and true or false)))
+        tostring(InCombatLockdown() and true or false), tostring(_G.issecretvalue ~= nil)))
     if not self.spells then
         return print("  no HoTs tracked for this class.")
     end
     local names = {}
     for _, spell in ipairs(self.spells) do table.insert(names, spellName(spell)) end
     print(("  tracking: %s"):format(table.concat(names, ", ")))
-    print(("  aura API: %s"):format(C_UnitAuras and C_UnitAuras.GetAuraDataByIndex and "C_UnitAuras"
-        or (_G.UnitAura and "UnitAura") or "none"))
-    local pending = 0
+    print(("  Blizzard hooks: UtilSetBuff %s"):format(tostring(type(_G.CompactUnitFrame_UtilSetBuff) == "function")))
+    local frames, pending = 0, 0
+    for _ in pairs(self.frames) do frames = frames + 1 end
     for _ in pairs(self.pending) do pending = pending + 1 end
-    print(("  raid frames: %d (waiting for combat to end: %d)"):format(countFrames(), pending))
-    local now = GetTime()
+    print(("  raid frames: %d (waiting for combat to end: %d)"):format(frames, pending))
     for frame, holder in pairs(self.frames) do
         if frame:IsVisible() then
-            local unit = frameUnit(frame)
             local parts = {}
-            for _, spell in ipairs(self.spells) do
-                local e = holder.expires[spell.key]
-                if e then table.insert(parts, ("%s %.1fs"):format(spell.key, e - now)) end
+            for i, slot in ipairs(holder.slots) do
+                local state = not slot.buff:IsShown() and "empty"
+                    or (slot.skip and "not a HoT") or "shown"
+                table.insert(parts, ("%d %s"):format(i, state))
             end
-            print(("  %s: %s (%s) %s"):format(frame:GetName(), tostring(unit),
-                tostring(unit and UnitName(unit)), #parts > 0 and table.concat(parts, ", ") or "no HoTs"))
+            local unit = frame.displayedUnit or frame.unit
+            print(("  %s: %s, %d buff icons: %s"):format(frame:GetName(), tostring(unit),
+                #holder.slots, #parts > 0 and table.concat(parts, ", ") or "none"))
         end
     end
 end
