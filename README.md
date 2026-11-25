@@ -221,4 +221,4 @@ The TOC targets interface `16001`. If the game lists QoL as out of date after a 
 
 ## Releasing
 
-Bump `## Version` in `QoL/QoL.toc` and push. The Release workflow builds `QoL-v<version>-forever.zip` and publishes it as a GitHub release, which WowUp installs from. It skips versions that already have a release.
+Bump `## Version` in `QoL/QoL.toc` and merge the PR to `main`. Pushes to other branches don't release. The Release workflow builds `QoL-v<version>-forever.zip` and publishes it as a GitHub release, which WowUp installs from. It skips versions that already have a release.
