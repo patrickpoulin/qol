@@ -15,6 +15,7 @@ local RETIRED_MODULES = {
     "dpm",        -- damage per mana, removed in 0.22.0
     "zeppelins",  -- zeppelin and boat map pins, removed in 0.23.0
     "flights",    -- flight master map pins, removed in 0.23.0
+    "hots",       -- raid frame HoT countdowns, removed in 0.26.0
 }
 
 function QoL:Print(...)
@@ -32,7 +33,6 @@ local function applyDefaults(target, defaults)
     end
     return target
 end
-QoL.ApplyDefaults = applyDefaults
 
 -- A module is a table with optional fields:
 --   name, description, defaults, charDefaults, slashHelp (list of lines)
@@ -77,10 +77,6 @@ function QoL:RegisterModule(key, module)
     self.modules[key] = module
     table.insert(self.moduleOrder, key)
     return module
-end
-
-function QoL:GetModule(key)
-    return self.modules[key]
 end
 
 local function migrate(db)

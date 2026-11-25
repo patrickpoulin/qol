@@ -130,14 +130,6 @@ function T:DeleteTask(tabId, taskId)
     end
 end
 
-function T:CountTasks(tab)
-    local done = 0
-    for _, task in ipairs(tab.tasks) do
-        if task.done then done = done + 1 end
-    end
-    return #tab.tasks - done, done
-end
-
 -- Delete every ticked task on a tab. Returns how many were removed.
 function T:ClearCompleted(tabId)
     local tab = self:GetTab(tabId)

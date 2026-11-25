@@ -81,7 +81,7 @@ Shows your threat on the enemy you have targeted, as a small number just above t
 
 ### Misc tab
 
-A built-in tab in the QoL window with on/off switches and settings, in sections: **Threat** (target frame and nameplate %), **Pet health** (the warning, its parts and both levels; the parts dim when the warning is off), **Flights** (flight times and the countdown bar), **Window** (how see-through the background is; the text and border stay solid), **Raid frame HoTs** (the big HoT countdowns, their icons and size), **Action bar** (hide the gryphons on either end of the main action bar) and **Trinkets** (the trinket window and its lock).
+A built-in tab in the QoL window with on/off switches and settings, in sections: **Threat** (target frame and nameplate %), **Pet health** (the warning, its parts and both levels; the parts dim when the warning is off), **Flights** (flight times and the countdown bar), **Window** (how see-through the background is; the text and border stay solid), **Action bar** (hide the gryphons on either end of the main action bar) and **Trinkets** (the trinket window and its lock).
 
 - A small face and your % to pull aggro: `100%` means you pull (or already have it). The face and number follow the game's threat colours: grey, yellow when you are close to pulling, orange, then red when the mob is on you. The face smiles while your threat is low, goes to a flat mouth when you are close (yellow and orange), and opens its mouth once the mob is on you.
 - It reads the game's own threat API (`UnitDetailedThreatSituation`). If the client doesn't have it, QoL uses LibThreatClassic2 when another addon (such as Details! or ThreatClassic2) ships it. With neither, nothing is shown.
@@ -166,25 +166,6 @@ A **Zone Levels** button in the top-right corner of the world map opens a list o
 - Click a zone to show it on the map. Hover for details.
 - Zones new in WoW Forever have a blue `*`. Shen'dralas and Mount Hyjal levels aren't confirmed yet.
 - `/qol zones` opens the map with the list showing.
-
-### Raid frame HoTs (`/qol hots`)
-
-Big countdowns for your own heal-over-time spells, just outside the right edge of each of Blizzard's raid frames, so you can see at a glance when to refresh them.
-
-- Priests see **Renew**. Druids see **Rejuvenation** and **Regrowth**. Every rank counts. Only HoTs you cast are shown, not other healers' ones.
-- Each number sits on top of its spell's icon with a cooldown swipe, like a normal cooldown, so you can tell your HoTs apart. They sit side by side in the same order as the small buff icons on the raid frame.
-- In combat the game hides buff names and times from addons, so QoL copies the small buff icons Blizzard's raid frame already shows for your HoTs onto its big ones, and the game draws the countdown numbers. That's why it keeps working in combat. When the game lets QoL read a buff's name (usually out of combat), your other buffs, such as Power Word: Fortitude, are left out.
-- Works on raid frames and on party frames when **Use Raid-Style Party Frames** is on in the game's options. The old-style party portraits aren't covered.
-- On by default. Turn it off, change the number size (10 to 30, 16 by default; the icons grow with it) or switch to numbers only, without icons, in the **Raid frame HoTs** section of the Misc tab.
-- It never touches Blizzard's raid frames, so it works in combat and click-casting is unaffected. The numbers sit outside the frame, so with several columns of raid frames side by side they overlap the next column a little. A size change made in combat, or a raid frame that first appears mid-fight, shows when combat ends.
-
-| Command | What it does |
-| --- | --- |
-| `/qol hots` / `on` / `off` | Turn the countdowns on or off |
-| `/qol hots size <10-30>` | Set how big the numbers are |
-| `/qol hots icon on` / `off` | Show each number on its spell's icon, or numbers only |
-| `/qol hots test` | Show sample timers on your raid frames for 15 seconds, to check the size |
-| `/qol hots debug` | Print what QoL sees on each raid frame |
 
 ### Mail address book (`/qol mail`)
 

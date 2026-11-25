@@ -76,13 +76,3 @@ function T:ConfirmDeleteTab(tabId)
         onAccept = function() self:DeleteTab(tabId) end,
     })
 end
-
-function T:ConfirmClearCompleted()
-    local tab = self:GetActiveTab()
-    local _, done = self:CountTasks(tab)
-    if done == 0 then return end
-    local msg = ("Delete %d completed task%s from \"%s\"?"):format(done, done == 1 and "" or "s", tab.name)
-    StaticPopup_Show("QOL_TODO_CONFIRM", msg, nil, {
-        onAccept = function() self:ClearCompleted(tab.id) end,
-    })
-end
