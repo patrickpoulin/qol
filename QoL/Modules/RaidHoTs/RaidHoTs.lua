@@ -20,6 +20,8 @@ local GAP = 2             -- pixels between the raid frame and the numbers
 local FONT = "Fonts\\FRIZQT__.TTF"
 local LOW_COLOR = { 1, 0.82, 0 }
 local TEST_LENGTH = 15    -- seconds /qol hots test runs for
+local ICON_SCALE = 1.75   -- icon edge, as a multiple of the number's size
+local ICON_GAP = 2        -- pixels between icons
 
 -- Your own HoTs, per class. Matched by name, so every rank counts. Each
 -- spell keeps its own row on the frame, top to bottom in this order, so a
@@ -49,12 +51,12 @@ local H = QoL:RegisterModule("hots", {
     defaults = {
         enabled = true,
         size = 16,     -- text height in pixels
-        icon = false,  -- spell icon in front of the number
+        icons = true,  -- each number sits on its spell's icon
     },
     slashHelp = {
         "/qol hots on | off - turn the big HoT countdowns on or off",
         "/qol hots size <10-30> - how big the numbers are",
-        "/qol hots icon on | off - show the spell icon in front of each number",
+        "/qol hots icon on | off - show each number on its spell's icon",
         "/qol hots test - show sample timers on your raid frames for a few seconds",
         "/qol hots debug - print what QoL sees on each raid frame",
     },
@@ -128,6 +130,10 @@ function H:ScanUnit(unit, out)
     return out
 end
 
+function H:OnLoad()
+    self.db.icon = nil -- 0.24.0's "icon beside the number" setting, replaced by icons
+end
+
 -- Holders -------------------------------------------------------------------
 
 function H:CreateHolder(frame)
@@ -139,7 +145,7 @@ function H:CreateHolder(frame)
         local row = {}
         row.text = holder:CreateFontString(nil, "OVERLAY")
         row.text:SetJustifyH("LEFT")
-        row.icon = holder:CreateTexture(nil, "OVERLAY")
+        row.icon = holder:CreateTexture(nil, "ARTWORK")
         row.icon:SetTexture(spellIcon(spell))
         row.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
         row.text:Hide()
@@ -161,20 +167,24 @@ function H:LayoutHolder(frame, holder)
     holder:SetFrameStrata(frame:GetFrameStrata())
     holder:SetFrameLevel(frame:GetFrameLevel() + 10)
 
-    -- Rows centred on the frame, each one text line tall.
     local count = #holder.rows
-    local rowHeight = size + 1
     for i, row in ipairs(holder.rows) do
-        local y = ((count + 1) / 2 - i) * rowHeight
         row.text:SetFont(FONT, size, "OUTLINE")
-        row.icon:SetSize(size, size)
-        row.icon:ClearAllPoints()
-        row.icon:SetPoint("LEFT", holder, "LEFT", 0, y)
         row.text:ClearAllPoints()
-        if self.db.icon then
-            row.text:SetPoint("LEFT", row.icon, "RIGHT", 2, 0)
+        row.icon:ClearAllPoints()
+        if self.db.icons then
+            -- Like a normal cooldown: the number centred on the spell's icon.
+            -- Icons sit side by side in a row, centred on the frame.
+            local iconSize = math.floor(size * ICON_SCALE + 0.5)
+            row.icon:SetSize(iconSize, iconSize)
+            row.icon:SetPoint("LEFT", holder, "LEFT", (i - 1) * (iconSize + ICON_GAP), 0)
+            row.text:SetPoint("CENTER", row.icon, "CENTER", 1, 0)
+            row.text:SetJustifyH("CENTER")
         else
+            -- Numbers only, stacked top to bottom and centred on the frame.
+            local y = ((count + 1) / 2 - i) * (size + 1)
             row.text:SetPoint("LEFT", holder, "LEFT", 0, y)
+            row.text:SetJustifyH("LEFT")
         end
     end
     holder:Show()
@@ -266,7 +276,7 @@ function H:Render()
                 row.text:SetText(formatTime(left))
                 row.text:SetTextColor(c[1], c[2], c[3])
                 row.text:Show()
-                row.icon:SetShown(self.db.icon)
+                row.icon:SetShown(self.db.icons)
             else
                 row.text:Hide()
                 row.icon:Hide()
@@ -352,7 +362,7 @@ function H:SetSize(size)
 end
 
 function H:SetIcon(on)
-    self.db.icon = on and true or false
+    self.db.icons = on and true or false
     if self.spells and not self:LayoutAll() then
         QoL:Print("the change shows when combat ends.")
     end
@@ -386,7 +396,7 @@ end
 function H:PrintDebug()
     local _, class = UnitClass("player")
     QoL:Print(("hots: class %s, on: %s, size %d, icon: %s, in combat: %s"):format(
-        tostring(class), tostring(self.db.enabled), self.db.size, tostring(self.db.icon),
+        tostring(class), tostring(self.db.enabled), self.db.size, tostring(self.db.icons),
         tostring(InCombatLockdown() and true or false)))
     if not self.spells then
         return print("  no HoTs tracked for this class.")
@@ -429,9 +439,9 @@ function H:OnSlash(args)
         if rest == "on" or rest == "off" then
             self:SetIcon(rest == "on")
         else
-            self:SetIcon(not self.db.icon)
+            self:SetIcon(not self.db.icons)
         end
-        return QoL:Print("spell icons are " .. (self.db.icon and "on." or "off."))
+        return QoL:Print("spell icons are " .. (self.db.icons and "on." or "off."))
     elseif cmd == "test" then
         return self:Test()
     elseif cmd == "debug" then
