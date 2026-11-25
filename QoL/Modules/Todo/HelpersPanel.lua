@@ -30,6 +30,7 @@ table.insert(T.referenceTabs, {
 -- Each helper: label, tooltip, and get/set for its value. A helper with
 -- kind = "slider" holds a number from min to max; the rest are checkboxes.
 local function petOn() return ns.PetHealth.db.enabled end
+local function hotsOn() return ns.RaidHoTs.db.enabled end
 
 local HELPERS = {
     { kind = "header", label = "Threat" },
@@ -104,6 +105,32 @@ local HELPERS = {
         format = function(v) return ("%d%%"):format(v) end,
         get = function() return ns.PetHealth.db.danger end,
         set = function(v) ns.PetHealth:SetDanger(v) end,
+    },
+
+    { kind = "header", label = "Raid frame HoTs" },
+    {
+        label = "Big countdowns for your HoTs beside the raid frames",
+        tooltip = "Shows how long your Renew, Rejuvenation and Regrowth have left in large numbers "
+            .. "just to the right of each raid frame. The number turns yellow in the last 3 seconds. "
+            .. "Works on raid frames and on raid-style party frames. Type /qol hots test to preview it.",
+        get = function() return ns.RaidHoTs.db.enabled end,
+        set = function(on) ns.RaidHoTs:SetEnabled(on) end,
+    },
+    {
+        indent = true, enabledIf = hotsOn,
+        label = "Show the spell icon in front of each number",
+        tooltip = "A small icon of the spell next to its countdown, to tell your HoTs apart at a glance.",
+        get = function() return ns.RaidHoTs.db.icon end,
+        set = function(on) ns.RaidHoTs:SetIcon(on) end,
+    },
+    {
+        kind = "slider", indent = true, enabledIf = hotsOn,
+        label = "Number size",
+        tooltip = "How tall the countdown numbers are. A change made in combat shows when combat ends.",
+        min = 10, max = 30, step = 1,
+        format = function(v) return ("%d"):format(v) end,
+        get = function() return ns.RaidHoTs.db.size end,
+        set = function(v) ns.RaidHoTs:SetSize(v) end,
     },
 
     { kind = "header", label = "Flights" },
