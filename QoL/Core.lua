@@ -16,6 +16,7 @@ local RETIRED_MODULES = {
     "zeppelins",  -- zeppelin and boat map pins, removed in 0.23.0
     "flights",    -- flight master map pins, removed in 0.23.0
     "hots",       -- raid frame HoT countdowns, removed in 0.26.0
+    "cds",        -- spell cooldown window and CDs tab, removed in 0.27.0
 }
 
 function QoL:Print(...)
